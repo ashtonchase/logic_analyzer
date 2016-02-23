@@ -19,7 +19,7 @@
 
 -- This program is distributed in the hope that it will be useful,
 -- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 -- GNU General Public License for more details.
 
 -- You should have received a copy of the GNU General Public License along
@@ -28,6 +28,37 @@
 -------------------------------------------------------------------------------
 -- Revisions  :
 -- Date        Version  Author      Description
--- 2016-02-22      1.0      ashton	    Created
+-- 2016-02-22      1.0      ashton          Created
 -------------------------------------------------------------------------------
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
+USE ieee.numeric_std.ALL;
 
+ENTITY capture_ctrl IS
+
+  GENERIC (
+    DATA_WIDTH : POSITIVE RANGE 1 TO 32 := 32);
+
+  PORT (
+    --top level interafaces
+    clk           : IN  STD_LOGIC;      -- Clock
+    rst           : IN  STD_LOGIC := '0';  -- syncronous reset
+    din           : IN  STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);  -- input channels
+    --message processing interfaces
+    rst_cmd       : IN  STD_LOGIC;
+    arm_cmd       : IN  STD_LOGIC;
+    trigger_mask  : IN  STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
+    trigger_valiu : IN  STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
+    capture_rdy   : OUT STD_LOGIC;
+    --fifo interface
+    fifo_tdata    : OUT STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);  --captured
+                                                                  --data output
+    fifo_tvalid   : OUT STD_LOGIC;      -- indicating tdata has valid data
+    fifo_tlast    : OUT STD_LOGIC;      -- no planned usage
+    fifo_tready   : IN  STD_LOGIC;      -- only used on initial setup
+    --dummy placeholder
+    placeholder   : IN  STD_LOGIC := '0'
+
+    );
+
+END ENTITY capture_ctrl;

@@ -29,4 +29,5 @@
 -- Date        Version      Author      Description
 -- 2016-02-22      1.0      (your name)	    Created
 -------------------------------------------------------------------------------
-
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
