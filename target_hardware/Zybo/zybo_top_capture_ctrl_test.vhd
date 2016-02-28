@@ -54,7 +54,7 @@ ARCHITECTURE top OF zybo_top IS
   -----------------------------------------------------------------------------
   -- Signals
   -----------------------------------------------------------------------------
-  SIGNAL reset      : STD_LOGIC := '1';  -- reset (async high, sync low)
+  SIGNAL reset,reset_clk_gen      : STD_LOGIC := '1';  -- reset (async high, sync low)
   SIGNAL run_clk    : STD_LOGIC := '0';  -- clock output of the clocking wizard
   SIGNAL clk_locked : STD_LOGIC := '0';  -- indicator if the clocking wizard has locked
   -----------------------------------------------------------------------------
@@ -73,7 +73,7 @@ ARCHITECTURE top OF zybo_top IS
   SIGNAL sample_enable  : STD_LOGIC                       := '1';
   SIGNAL sample_cnt_rst : STD_LOGIC;
   SIGNAL delay_cnt_4x   : STD_LOGIC_VECTOR(16-1 DOWNTO 0) := (OTHERS => '0');
-  SIGNAL read_cnt_4x    : STD_LOGIC_VECTOR(16-1 DOWNTO 0) := (OTHERS => '1');
+  SIGNAL read_cnt_4x    : STD_LOGIC_VECTOR(16-1 DOWNTO 0) := STD_LOGIC_VECTOR(to_unsigned(1000,16));
   SIGNAL par_trig_msk   : STD_LOGIC_VECTOR(32-1 DOWNTO 0) := X"00_00_00_03";
   SIGNAL par_trig_val   : STD_LOGIC_VECTOR(32-1 DOWNTO 0) := (OTHERS => '1');
   SIGNAL capture_rdy    : STD_LOGIC;
@@ -89,7 +89,7 @@ ARCHITECTURE top OF zybo_top IS
 BEGIN  -- ARCHITECTURE top
 
   je<=fifo_tdata(7 downto 0);
-
+  led(1)<=clk_locked;
   capture_ctrl_1 : ENTITY work.capture_ctrl
     GENERIC MAP (
       DATA_WIDTH => DATA_WIDTH)
@@ -101,9 +101,9 @@ BEGIN  -- ARCHITECTURE top
       triggered      => led(2),
       rst_cmd        => reset_btn,
       arm_cmd        => btn(3),
-      sample_enable  => sample_enable,
+   --   sample_enable  => sample_enable,
       sample_cnt_rst => sample_cnt_rst,
-      delay_cnt_4x   => delay_cnt_4x,
+    --  delay_cnt_4x   => delay_cnt_4x,
       read_cnt_4x    => read_cnt_4x,
       par_trig_msk   => par_trig_msk,
       par_trig_val   => par_trig_val,
@@ -130,8 +130,8 @@ BEGIN  -- ARCHITECTURE top
       -- Clock out ports  
       clk_out1 => run_clk,
       -- Status and control signals                
-      reset    => '0',
-      locked   => led(1)
+      reset    => reset_clk_gen,
+      locked   => clk_locked
       );
 
 
@@ -141,14 +141,35 @@ BEGIN  -- ARCHITECTURE top
   -- type   : combinational
   -- inputs : reset_btn, clk, clk_locked
   -- outputs: reset
-  reset_proc : PROCESS (reset_btn, clk) IS
+  run_clk_reset_proc : PROCESS (reset_btn, run_clk) IS
+  variable reset_dly_v : std_logic;
   BEGIN  -- PROCESS reset_proc
     IF reset_btn = '1' THEN
       reset <= '1';
-    ELSIF rising_edge(clk) THEN
-      reset <= '0';
+      reset_dly_v := '1';
+    ELSIF rising_edge(run_clk) THEN
+    if clk_locked='1' then 
+      reset <= reset_dly_v;
+      reset_dly_v:='0';
+     else 
+      reset <= '1';
+      reset_dly_v := '1';
+      end if;
     END IF;
-  END PROCESS reset_proc;
+  END PROCESS run_clk_reset_proc;
+  
+  
+  reset_proc : PROCESS (reset_btn, clk) IS
+    variable reset_dly_v : std_logic;
+    BEGIN  -- PROCESS reset_proc
+      IF reset_btn = '1' THEN
+        reset_clk_gen <= '1';
+      ELSIF rising_edge(clk)  THEN
+        reset_clk_gen <= reset_dly_v;
+        reset_dly_v:='0';
+      END IF;
+    END PROCESS reset_proc;
+
 
 
 END ARCHITECTURE top;
