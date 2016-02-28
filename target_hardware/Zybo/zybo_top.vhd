@@ -33,7 +33,7 @@
 ENTITY zybo_top IS
 
   PORT (
-    clk : IN  STD_LOGIC                      -- 125 MHz clock
+    clk : IN  STD_LOGIC;                      -- 125 MHz clock
     je  : IN  STD_LOGIC_VECTOR(7 DOWNTO 0);  -- PMOD JE inputs
     led : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);  --LED outputs
     sw  : IN  STD_LOGIC_VECTOR(3 DOWNTO 0);  -- Switches
