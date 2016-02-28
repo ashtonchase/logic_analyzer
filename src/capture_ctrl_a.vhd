@@ -114,6 +114,11 @@ ARCHITECTURE behavioral OF capture_ctrl IS
 
   --capture count
   SIGNAL capture_cnt, delay_cnt : NATURAL RANGE 0 TO 262_141 := 0;
+  
+  attribute MARK_DEBUG : string;
+  attribute MARK_DEBUG of armed_o, triggered_o, capture_cnt, state: signal is "TRUE";
+                  
+                  
 
 
 BEGIN  -- ARCHITECTURE behavioral
@@ -130,7 +135,7 @@ BEGIN  -- ARCHITECTURE behavioral
   --top lelel assigments
   armed       <= armed_o;
   triggered   <= triggered_o;
-
+sample_cnt_rst <= sample_cnt_rst_o;
 
   -----------------------------------------------------------------------------
   -- Processes
@@ -197,7 +202,7 @@ BEGIN  -- ARCHITECTURE behavioral
             END IF is_trigged;
           -------------------------------------------------------------------
           WHEN DELAY_HOLD =>
-            is_dly_done : IF (capture_cnt = to_integer(UNSIGNED(read_cnt_4x_l))*8) THEN
+            is_dly_done : IF (delay_cnt = to_integer(UNSIGNED(delay_cnt_4x_l))*8) THEN
               delay_cnt <= 0;
               state     <= CAPTURE_DATA;
             ELSIF sample_enable = '1' THEN

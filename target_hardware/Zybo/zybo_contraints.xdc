@@ -4,10 +4,10 @@
 ## - rename the used signals according to the project
 
 ##Clock signal
-##IO_L11P_T1_SRCC_35	
+##IO_L11P_T1_SRCC_35
 set_property PACKAGE_PIN L16 [get_ports clk]
 set_property IOSTANDARD LVCMOS33 [get_ports clk]
-create_clock -add -name sys_clk_pin -period 8.00 -waveform {0 4} [get_ports clk]
+create_clock -period 8.000 -name sys_clk_pin -waveform {0.000 4.000} -add [get_ports clk]
 
 ##Switches
 ##IO_L19N_T3_VREF_35
@@ -404,4 +404,5 @@ set_property IOSTANDARD LVCMOS33 [get_ports {je[7]}]
 ##IO_0_34
 #set_property PACKAGE_PIN R19 [get_ports vga_vs]
 #set_property IOSTANDARD LVCMOS33 [get_ports vga_vs]
+
 
