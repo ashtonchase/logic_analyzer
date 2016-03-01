@@ -76,7 +76,9 @@ ENTITY capture_ctrl IS
     fifo_tvalid : OUT STD_LOGIC;        -- indicating tdata has valid data
     fifo_tlast  : OUT STD_LOGIC;        -- no planned usage
     fifo_tready : IN  STD_LOGIC := '1';  -- only used on initial setup
-    fifo_tfull  : IN  STD_LOGIC := '0';
+    fifo_tfull  : IN  STD_LOGIC := '0'; --no intended use
+    fifo_tempty : IN  STD_LOGIC := '1'; --needs to control capture_rdy
+    fifo_aresetn : OUT STD_LOGIC;  --used to flush fifo in reset cmd.
     --dummy placeholder
     placeholder : IN  STD_LOGIC := '0'
 
