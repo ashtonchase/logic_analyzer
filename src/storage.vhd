@@ -85,6 +85,9 @@ architecture behave of storage is
     signal out_point : natural range 0 to FIFO_SIZE-1;
     signal last_point : natural range 0 to FIFO_SIZE-1; -- assuming there will only be one last in the fifo at a time
     signal fifo_empty : std_logic;
+    
+    -- Control signal to re-initialize all the pointers
+    signal reset_points : std_logic;
 
 begin
 
@@ -100,35 +103,38 @@ begin
                     in_state <= INIT;
                     last_point <= 0;
                 else 
+                    -----------------------------
                     -- TLast Control
-                    if fifo_empty='1' then
+                    if reset_points='1' then
                         last_point <= 0;
                     elsif in_fifo_tlast='1' and in_state=STORE then
                         last_point <= in_point;
+                    end if;
+                    -----------------------------
+                    -- TFull Control
+                    if in_point=FIFO_SIZE then
+                        in_fifo_tfull <= '1';
+                    else
+                        in_fifo_tfull <= '0';
                     end if;
                     -----------------------------
                     -- Input Storage Control
                     case in_state is
                         when INIT =>
                             in_fifo_tready <= '0';
-                            if in_fifo_tvalid='1' and last_point=0 then
+                            if in_fifo_tvalid='1' and last_point=0 and in_point<FIFO_SIZE then
                                 in_state <= STORE;
                                 -- Say we are ready for next word, for one clock cycle
                                 in_fifo_tready <= '1';
                             elsif in_fifo_tflush='1' then
                                 in_state <= FLUSH;
                             end if;
-                            -- Output there is no more space in the FIFO
-                            if in_point=FIFO_SIZE-1 then
-                                in_fifo_tfull <= '1';
-                            else
-                                in_fifo_tfull <= '0';
-                            end if;
                         when STORE =>
                             if in_fifo_tlast='1' then -- last word
                                 in_state <= WAIT_FOR_EMPTY;
                                 in_fifo_tready <= '0';
                                 fifo_data(in_point) <= in_fifo_tdata;
+                                in_point <= in_point + 1;
                             elsif in_fifo_tvalid='0' then -- currently no data
                                 in_state <= INIT;
                                 in_fifo_tready <= '0';
@@ -137,7 +143,7 @@ begin
                                 in_point <= in_point + 1;
                             end if; -- else stay here and keep storing data
                         when WAIT_FOR_EMPTY =>
-                            if last_point=0 then
+                            if reset_points='1' then
                                 in_state <= INIT;
                                 in_point <= 0;
                             end if;
@@ -170,6 +176,7 @@ begin
                     out_fifo_tdata <= x"00";
                     idx <= 0;
                     fifo_empty <= '1';
+                    reset_points <= '0';
                 else
                     case out_state is 
                         when INIT =>
@@ -182,6 +189,8 @@ begin
                             -- De-asserts FIFO empty if input starts increasing again.
                             if in_point > out_point then
                                 fifo_empty <= '0';
+                            else
+                                fifo_empty <= '1';
                             end if;                            
                         when GRAB_WORD =>
                             if out_point <= in_point then
@@ -211,7 +220,7 @@ begin
                             end if;
                         when UPDATE_POINT =>
                             if out_point = last_point and last_point/=0 then
-                                fifo_empty <= '1';
+                                reset_points <= '1';
                                 out_state <= WAIT_UPDATE;
                             else
                                 out_point <= out_point + 1;
@@ -221,6 +230,7 @@ begin
                             out_point <= 0;
                             -- waiting until the input stream is pointing at the beginning again
                             if in_point=0 then
+                                reset_points <= '0';
                                 out_state <= INIT;
                             end if;
                         when FLUSH =>

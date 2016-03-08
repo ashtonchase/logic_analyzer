@@ -45,7 +45,7 @@ architecture behave of tb_storage is
     signal valid_in : std_logic := '0';
     signal last_in : std_logic := '0';
     signal ready_in : std_logic := '0';
-    signal full_in : std_logic := '0';
+    signal full : std_logic := '0';
     signal empty : std_logic := '0';
     signal flush : std_logic := '0';
 
@@ -86,7 +86,7 @@ begin
         in_fifo_tvalid => valid_in,
         in_fifo_tlast  => last_in,
         in_fifo_tready  => ready_in,
-        in_fifo_tfull => full_in,
+        in_fifo_tfull => full,
         in_fifo_tempty => empty,
         in_fifo_tflush => flush,
                 
@@ -142,11 +142,28 @@ begin
         
         ------------------------------------
         -- Try to Store Data before last word has been outputted
+        -- It will sit here until output_pr has read everything out
         store_word(7);
         
         ------------------------------------
-        wait for 6us; -- wait for out to finish its pull tests
+        -- Feeding word in, to see if it will read out if waiting for data to be outputted
+        wait for 1us;
+        store_word(3);
+        wait for 100ns;
         
+        ------------------------------------
+        -- Fill the entire FIFO, testing full signal
+        for idx in 0 to 28 loop -- already has 2 values in it
+            store_word(0);
+        end loop;
+        last_in <= '1';
+        store_word(0); -- if I change speeds here and put tlast, in breaks ***************
+        last_in <= '0';
+        wait for 20ns;
+        assert full='1' report "FIFO should be full" severity error;
+        
+        ------------------------------------
+        wait for 6us; -- wait for out to finish its pull tests
         wait;
     end process input_main_pr;
     
@@ -182,7 +199,7 @@ begin
         for idx in 22 downto 2 loop
             wait for 50ns;
             pull_word(idx);
-        assert empty='0' report "FIFO should not be empty, pulled tlast" severity error;
+            assert empty='0' report "FIFO should not be empty, pulled tlast" severity error;
         end loop;
         
         ------------------------------------
@@ -191,13 +208,16 @@ begin
         pull_word(5);
         assert empty='1' report "FIFO should be empty, pulled tlast" severity error;
         
-        
         ------------------------------------
-        -- Testing handling of last word
+        -- Testing handling of reading only word
         wait for 300ns;
         pull_word(5);
-        -- Should it say empty in our scheme, without giving a last
-        --assert empty='1' report "FIFO should be empty, pulled tlast" severity error;
+        assert empty='1' report "FIFO should be empty, pulled tlast" severity error;
+        
+        ------------------------------------
+        -- Testing reading out when there is nothing there
+        wait for 100ns;
+        pull_word(5);
         
         
         --*********** tests still needed
