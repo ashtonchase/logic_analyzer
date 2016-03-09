@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : zybo_top_capture_cotnrol_test.vhd
 -- Created    : 2016-02-22
--- Last update: 2016-02-22
+-- Last update: 2016-03-06
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: Xilinx Zynq 7000 on a Digilent Zybo Board Top Level Module, 
@@ -35,10 +35,34 @@ USE ieee.numeric_std.ALL;
 ENTITY zybo_top IS
 
   PORT (
+    DDR_addr          : INOUT STD_LOGIC_VECTOR (14 DOWNTO 0);
+    DDR_ba            : INOUT STD_LOGIC_VECTOR (2 DOWNTO 0);
+    DDR_cas_n         : INOUT STD_LOGIC;
+    DDR_ck_n          : INOUT STD_LOGIC;
+    DDR_ck_p          : INOUT STD_LOGIC;
+    DDR_cke           : INOUT STD_LOGIC;
+    DDR_cs_n          : INOUT STD_LOGIC;
+    DDR_dm            : INOUT STD_LOGIC_VECTOR (3 DOWNTO 0);
+    DDR_dq            : INOUT STD_LOGIC_VECTOR (31 DOWNTO 0);
+    DDR_dqs_n         : INOUT STD_LOGIC_VECTOR (3 DOWNTO 0);
+    DDR_dqs_p         : INOUT STD_LOGIC_VECTOR (3 DOWNTO 0);
+    DDR_odt           : INOUT STD_LOGIC;
+    DDR_ras_n         : INOUT STD_LOGIC;
+    DDR_reset_n       : INOUT STD_LOGIC;
+    DDR_we_n          : INOUT STD_LOGIC;
+    FIXED_IO_ddr_vrn  : INOUT STD_LOGIC;
+    FIXED_IO_ddr_vrp  : INOUT STD_LOGIC;
+    FIXED_IO_mio      : INOUT STD_LOGIC_VECTOR (53 DOWNTO 0);
+    FIXED_IO_ps_clk   : INOUT STD_LOGIC;
+    FIXED_IO_ps_porb  : INOUT STD_LOGIC;
+    FIXED_IO_ps_srstb : INOUT STD_LOGIC;
+
+
+
     clk : IN  STD_LOGIC;                     -- 125 MHz clock
-    je  : out  STD_LOGIC_VECTOR(7 DOWNTO 0);  -- PMOD JE inputs
+    je  : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);  -- PMOD JE inputs
     led : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);  --LED outputs
-  --  sw  : IN  STD_LOGIC_VECTOR(3 DOWNTO 0);  -- Switches
+    --  sw  : IN  STD_LOGIC_VECTOR(3 DOWNTO 0);  -- Switches
     btn : IN  STD_LOGIC_VECTOR(3 DOWNTO 0)   --Buttons
     );
 
@@ -50,17 +74,17 @@ ARCHITECTURE top OF zybo_top IS
   -----------------------------------------------------------------------------
   -- Components
   -----------------------------------------------------------------------------
- 
+
   -----------------------------------------------------------------------------
   -- Signals
   -----------------------------------------------------------------------------
-  SIGNAL reset,reset_clk_gen      : STD_LOGIC := '1';  -- reset (async high, sync low)
-  SIGNAL run_clk    : STD_LOGIC := '0';  -- clock output of the clocking wizard
-  SIGNAL clk_locked : STD_LOGIC := '0';  -- indicator if the clocking wizard has locked
+  SIGNAL reset, reset_clk_gen : STD_LOGIC := '1';  -- reset (async high, sync low)
+  SIGNAL run_clk              : STD_LOGIC := '0';  -- clock output of the clocking wizard
+  SIGNAL clk_locked           : STD_LOGIC := '0';  -- indicator if the clocking wizard has locked
   -----------------------------------------------------------------------------
   -- Aliases
   -----------------------------------------------------------------------------
-  ALIAS reset_btn   : STD_LOGIC IS btn(0);
+  ALIAS reset_btn             : STD_LOGIC IS btn(0);
 
 
   CONSTANT DATA_WIDTH : POSITIVE := 8;
@@ -73,7 +97,7 @@ ARCHITECTURE top OF zybo_top IS
   SIGNAL sample_enable  : STD_LOGIC                       := '1';
   SIGNAL sample_cnt_rst : STD_LOGIC;
   SIGNAL delay_cnt_4x   : STD_LOGIC_VECTOR(16-1 DOWNTO 0) := (OTHERS => '0');
-  SIGNAL read_cnt_4x    : STD_LOGIC_VECTOR(16-1 DOWNTO 0) := STD_LOGIC_VECTOR(to_unsigned(1000,16));
+  SIGNAL read_cnt_4x    : STD_LOGIC_VECTOR(16-1 DOWNTO 0) := STD_LOGIC_VECTOR(to_unsigned(1000, 16));
   SIGNAL par_trig_msk   : STD_LOGIC_VECTOR(32-1 DOWNTO 0) := X"00_00_00_03";
   SIGNAL par_trig_val   : STD_LOGIC_VECTOR(32-1 DOWNTO 0) := (OTHERS => '1');
   SIGNAL capture_rdy    : STD_LOGIC;
@@ -85,11 +109,41 @@ ARCHITECTURE top OF zybo_top IS
   SIGNAL placeholder    : STD_LOGIC                       := '0';
 
 
+  COMPONENT design_1_wrapper IS
+    PORT (
+      DDR_addr          : INOUT STD_LOGIC_VECTOR (14 DOWNTO 0);
+      DDR_ba            : INOUT STD_LOGIC_VECTOR (2 DOWNTO 0);
+      DDR_cas_n         : INOUT STD_LOGIC;
+      DDR_ck_n          : INOUT STD_LOGIC;
+      DDR_ck_p          : INOUT STD_LOGIC;
+      DDR_cke           : INOUT STD_LOGIC;
+      DDR_cs_n          : INOUT STD_LOGIC;
+      DDR_dm            : INOUT STD_LOGIC_VECTOR (3 DOWNTO 0);
+      DDR_dq            : INOUT STD_LOGIC_VECTOR (31 DOWNTO 0);
+      DDR_dqs_n         : INOUT STD_LOGIC_VECTOR (3 DOWNTO 0);
+      DDR_dqs_p         : INOUT STD_LOGIC_VECTOR (3 DOWNTO 0);
+      DDR_odt           : INOUT STD_LOGIC;
+      DDR_ras_n         : INOUT STD_LOGIC;
+      DDR_reset_n       : INOUT STD_LOGIC;
+      DDR_we_n          : INOUT STD_LOGIC;
+      FIXED_IO_ddr_vrn  : INOUT STD_LOGIC;
+      FIXED_IO_ddr_vrp  : INOUT STD_LOGIC;
+      FIXED_IO_mio      : INOUT STD_LOGIC_VECTOR (53 DOWNTO 0);
+      FIXED_IO_ps_clk   : INOUT STD_LOGIC;
+      FIXED_IO_ps_porb  : INOUT STD_LOGIC;
+      FIXED_IO_ps_srstb : INOUT STD_LOGIC;
+      UART_rxd          : IN    STD_LOGIC;
+      UART_txd          : OUT   STD_LOGIC
+      );
+  END COMPONENT;
+
+
+  SIGNAL uart_txd, uart_rxd : STD_LOGIC := '0';
 
 BEGIN  -- ARCHITECTURE top
 
-  je<=fifo_tdata(7 downto 0);
-  led(1)<=clk_locked;
+  je     <= fifo_tdata(7 DOWNTO 0);
+  led(1) <= clk_locked;
   capture_ctrl_1 : ENTITY work.capture_ctrl
     GENERIC MAP (
       DATA_WIDTH => DATA_WIDTH)
@@ -101,9 +155,9 @@ BEGIN  -- ARCHITECTURE top
       triggered      => led(2),
       rst_cmd        => reset_btn,
       arm_cmd        => btn(3),
-   --   sample_enable  => sample_enable,
+      --   sample_enable  => sample_enable,
       sample_cnt_rst => sample_cnt_rst,
-    --  delay_cnt_4x   => delay_cnt_4x,
+      --  delay_cnt_4x   => delay_cnt_4x,
       read_cnt_4x    => read_cnt_4x,
       par_trig_msk   => par_trig_msk,
       par_trig_val   => par_trig_val,
@@ -142,34 +196,58 @@ BEGIN  -- ARCHITECTURE top
   -- inputs : reset_btn, clk, clk_locked
   -- outputs: reset
   run_clk_reset_proc : PROCESS (reset_btn, run_clk) IS
-  variable reset_dly_v : std_logic;
+    VARIABLE reset_dly_v : STD_LOGIC;
   BEGIN  -- PROCESS reset_proc
     IF reset_btn = '1' THEN
-      reset <= '1';
+      reset       <= '1';
       reset_dly_v := '1';
     ELSIF rising_edge(run_clk) THEN
-    if clk_locked='1' then 
-      reset <= reset_dly_v;
-      reset_dly_v:='0';
-     else 
-      reset <= '1';
+      IF clk_locked = '1' then
+      reset       <= reset_dly_v;
+      reset_dly_v := '0';
+    ELSE
+      reset       <= '1';
       reset_dly_v := '1';
-      end if;
     END IF;
-  END PROCESS run_clk_reset_proc;
-  
-  
-  reset_proc : PROCESS (reset_btn, clk) IS
-    variable reset_dly_v : std_logic;
-    BEGIN  -- PROCESS reset_proc
-      IF reset_btn = '1' THEN
-        reset_clk_gen <= '1';
-      ELSIF rising_edge(clk)  THEN
-        reset_clk_gen <= reset_dly_v;
-        reset_dly_v:='0';
-      END IF;
-    END PROCESS reset_proc;
+  END IF;
+END PROCESS run_clk_reset_proc;
 
 
+reset_proc : PROCESS (reset_btn, clk) IS
+  VARIABLE reset_dly_v : STD_LOGIC;
+BEGIN  -- PROCESS reset_proc
+  IF reset_btn = '1' THEN
+    reset_clk_gen <= '1';
+  ELSIF rising_edge(clk) THEN
+    reset_clk_gen <= reset_dly_v;
+    reset_dly_v   := '0';
+  END IF;
+END PROCESS reset_proc;
+
+zynq : ENTITY work.design_1_wrapper
+  PORT MAP (
+    DDR_addr          => DDR_addr,
+    DDR_ba            => DDR_ba,
+    DDR_cas_n         => DDR_cas_n,
+    DDR_ck_n          => DDR_ck_n,
+    DDR_ck_p          => DDR_ck_p,
+    DDR_cke           => DDR_cke,
+    DDR_cs_n          => DDR_cs_n,
+    DDR_dm            => DDR_dm,
+    DDR_dq            => DDR_dq,
+    DDR_dqs_n         => DDR_dqs_n,
+    DDR_dqs_p         => DDR_dqs_p,
+    DDR_odt           => DDR_odt,
+    DDR_ras_n         => DDR_ras_n,
+    DDR_reset_n       => DDR_reset_n,
+    DDR_we_n          => DDR_we_n,
+    FIXED_IO_ddr_vrn  => FIXED_IO_ddr_vrn,
+    FIXED_IO_ddr_vrp  => FIXED_IO_ddr_vrp,
+    FIXED_IO_mio      => FIXED_IO_mio,
+    FIXED_IO_ps_clk   => FIXED_IO_ps_clk,
+    FIXED_IO_ps_porb  => FIXED_IO_ps_porb,
+    FIXED_IO_ps_srstb => FIXED_IO_ps_srstb,
+    UART_rxd          => UART_rxd,
+    UART_txd          => UART_txd);
 
 END ARCHITECTURE top;

@@ -106,14 +106,14 @@ ARCHITECTURE behavioral OF capture_ctrl IS
   SIGNAL fifo_tvalid_o    : STD_LOGIC                               := '0';
   SIGNAL fifo_tlast_o     : STD_LOGIC                               := '0';
 
-
+  SIGNAL trig : STD_LOGIC :='0';
 
   --state machine signals
   TYPE state_t IS (INIT, WAIT_FOR_ARM_CMD, WAIT_FOR_TRIGGER, DELAY_HOLD, CAPTURE_DATA);
   SIGNAL state : state_t := INIT;
 
   --capture count
-  SIGNAL capture_cnt, delay_cnt : NATURAL RANGE 0 TO 262_141 := 0;
+  SIGNAL capture_cnt,capture_cnt_plus, delay_cnt, delay_cnt_plus : NATURAL RANGE 0 TO 262_141+1 := 0;
   
   attribute MARK_DEBUG : string;
   attribute MARK_DEBUG of armed_o, triggered_o, capture_cnt, state: signal is "TRUE";
@@ -123,6 +123,12 @@ ARCHITECTURE behavioral OF capture_ctrl IS
 
 BEGIN  -- ARCHITECTURE behavioral
 
+  --fast trigger detect
+  trig <='1' when ((din_ff AND par_trig_val_l) = par_trig_msk_l) else
+         '0';
+  --fast adds
+  capture_cnt_plus<=capture_cnt + 1; 
+  delay_cnt_plus<=delay_cnt+1;
   -----------------------------------------------------------------------------
   -- Concurrent assigments
   -----------------------------------------------------------------------------
@@ -135,7 +141,7 @@ BEGIN  -- ARCHITECTURE behavioral
   --top lelel assigments
   armed       <= armed_o;
   triggered   <= triggered_o;
-sample_cnt_rst <= sample_cnt_rst_o;
+  sample_cnt_rst <= sample_cnt_rst_o;
 
   -----------------------------------------------------------------------------
   -- Processes
@@ -188,7 +194,7 @@ sample_cnt_rst <= sample_cnt_rst_o;
           -------------------------------------------------------------------
           WHEN WAIT_FOR_TRIGGER =>
 
-            is_trigged : IF ((din_ff AND par_trig_val_l) = par_trig_msk_l) THEN
+            is_trigged : IF trig='1' THEN
               --go delay if requred
               should_delay : IF delay_cnt_4x_l = X"00_00" THEN
                 state            <= CAPTURE_DATA;
@@ -198,7 +204,7 @@ sample_cnt_rst <= sample_cnt_rst_o;
                 state <= DELAY_HOLD;
               END IF should_delay;
               triggered_o <= '1';
-              inc(capture_cnt);
+              capture_cnt<=capture_cnt_plus;
             END IF is_trigged;
           -------------------------------------------------------------------
           WHEN DELAY_HOLD =>
@@ -206,7 +212,7 @@ sample_cnt_rst <= sample_cnt_rst_o;
               delay_cnt <= 0;
               state     <= CAPTURE_DATA;
             ELSIF sample_enable = '1' THEN
-              inc(delay_cnt);
+             delay_cnt<=delay_cnt_plus;
             END IF is_dly_done;
           -------------------------------------------------------------------
           WHEN CAPTURE_DATA =>
@@ -224,10 +230,10 @@ sample_cnt_rst <= sample_cnt_rst_o;
               delay_cnt <= 0;
             --else more samples to collect
             ELSIF delay_cnt_4x_l = X"00_00" THEN
-              inc(capture_cnt);
+            capture_cnt<=capture_cnt_plus;
               fifo_tvalid_o <= '1';
             ELSIF sample_enable = '1' THEN
-              inc(capture_cnt);
+            capture_cnt<=capture_cnt_plus;
               fifo_tvalid_o <= '1';
 
             END IF is_done;
