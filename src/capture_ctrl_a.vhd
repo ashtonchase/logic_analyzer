@@ -185,7 +185,7 @@ BEGIN  -- ARCHITECTURE behavioral
             par_trig_msk_l <= par_trig_msk(DATA_WIDTH-1 DOWNTO 0);
             par_trig_val_l <= par_trig_val(DATA_WIDTH-1 DOWNTO 0);
             delay_cnt_4x_l <= delay_cnt_4x;
-            read_cnt_4x_l  <= read_cnt_4x;
+            read_cnt_4x_l  <= delay_cnt_4x;
             capture_rdy_o  <= '1';
             is_arm : IF arm_cmd = '1' THEN
               state   <= WAIT_FOR_TRIGGER;
