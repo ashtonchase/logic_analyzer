@@ -167,9 +167,11 @@ BEGIN  -- ARCHITECTURE behavioral
       fifo_tlast_o                        <= '0';
       sample_cnt_rst_o                    <= '1';
       capture_rdy_o                       <= '0';
+      fifo_aresetn                        <= '0';
 
       is_rst : IF rst = '1' THEN        -- synchronous reset (active high)
         state <= INIT;
+        fifo_aresetn                        <= '1';
       ELSE
         fsm : CASE state IS
           WHEN INIT =>

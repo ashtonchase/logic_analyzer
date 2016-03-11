@@ -121,12 +121,12 @@ begin
                     -- Input Storage Control
                     case in_state is
                         when INIT =>
-                            in_fifo_tready <= '0';
+                            in_fifo_tready <= '1';
                             if in_fifo_tvalid='1' and last_point=0 and in_point<FIFO_SIZE then
                                 in_state <= STORE;
                                 -- Say we are ready for next word, for one clock cycle
-                                in_fifo_tready <= '1';
                             elsif in_fifo_tflush='1' then
+                                in_fifo_tready <= '0';
                                 in_state <= FLUSH;
                             end if;
                         when STORE =>

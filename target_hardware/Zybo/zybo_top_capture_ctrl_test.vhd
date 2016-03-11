@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : zybo_top_capture_cotnrol_test.vhd
 -- Created    : 2016-02-22
--- Last update: 2016-03-06
+-- Last update: 2016-03-11
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: Xilinx Zynq 7000 on a Digilent Zybo Board Top Level Module, 
@@ -89,26 +89,30 @@ ARCHITECTURE top OF zybo_top IS
 
   CONSTANT DATA_WIDTH : POSITIVE := 8;
 
-  SIGNAL din            : STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
-  SIGNAL armed          : STD_LOGIC;
-  SIGNAL triggered      : STD_LOGIC;
-  SIGNAL rst_cmd        : STD_LOGIC                       := '0';
-  SIGNAL arm_cmd        : STD_LOGIC;
-  SIGNAL sample_enable  : STD_LOGIC                       := '1';
-  SIGNAL sample_cnt_rst : STD_LOGIC;
-  SIGNAL delay_cnt_4x   : STD_LOGIC_VECTOR(16-1 DOWNTO 0) := (OTHERS => '0');
-  SIGNAL read_cnt_4x    : STD_LOGIC_VECTOR(16-1 DOWNTO 0) := STD_LOGIC_VECTOR(to_unsigned(1000, 16));
-  SIGNAL par_trig_msk   : STD_LOGIC_VECTOR(32-1 DOWNTO 0) := X"00_00_00_03";
-  SIGNAL par_trig_val   : STD_LOGIC_VECTOR(32-1 DOWNTO 0) := (OTHERS => '1');
-  SIGNAL capture_rdy    : STD_LOGIC;
-  SIGNAL fifo_tdata     : STD_LOGIC_VECTOR(32-1 DOWNTO 0);
-  SIGNAL fifo_tvalid    : STD_LOGIC;
-  SIGNAL fifo_tlast     : STD_LOGIC;
-  SIGNAL fifo_tready    : STD_LOGIC                       := '1';
-  SIGNAL fifo_tfull     : STD_LOGIC                       := '0';
-  SIGNAL placeholder    : STD_LOGIC                       := '0';
-
-
+  SIGNAL din             : STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
+  SIGNAL armed           : STD_LOGIC;
+  SIGNAL triggered       : STD_LOGIC;
+  SIGNAL rst_cmd         : STD_LOGIC                       := '0';
+  SIGNAL arm_cmd         : STD_LOGIC;
+  SIGNAL sample_enable   : STD_LOGIC                       := '1';
+  SIGNAL sample_cnt_rst  : STD_LOGIC;
+  SIGNAL delay_cnt_4x    : STD_LOGIC_VECTOR(16-1 DOWNTO 0) := (OTHERS => '0');
+  SIGNAL read_cnt_4x     : STD_LOGIC_VECTOR(16-1 DOWNTO 0) := STD_LOGIC_VECTOR(to_unsigned(1000, 16));
+  SIGNAL par_trig_msk    : STD_LOGIC_VECTOR(32-1 DOWNTO 0) := X"00_00_00_03";
+  SIGNAL par_trig_val    : STD_LOGIC_VECTOR(32-1 DOWNTO 0) := (OTHERS => '1');
+  SIGNAL capture_rdy     : STD_LOGIC;
+  SIGNAL in_fifo_tdata   : STD_LOGIC_VECTOR(31 DOWNTO 0);
+  SIGNAL in_fifo_tvalid  : STD_LOGIC;
+  SIGNAL in_fifo_tlast   : STD_LOGIC;
+  SIGNAL in_fifo_tready  : STD_LOGIC;
+  SIGNAL in_fifo_tfull   : STD_LOGIC;
+  SIGNAL in_fifo_tempty  : STD_LOGIC;
+  SIGNAL in_fifo_tflush  : STD_LOGIC;
+  --
+  SIGNAL out_fifo_tdata  : STD_LOGIC_VECTOR(7 DOWNTO 0);
+  SIGNAL out_fifo_tvalid : STD_LOGIC;
+  SIGNAL out_fifo_tlast  : STD_LOGIC;
+  SIGNAL out_fifo_tready : STD_LOGIC;
   COMPONENT design_1_wrapper IS
     PORT (
       DDR_addr          : INOUT STD_LOGIC_VECTOR (14 DOWNTO 0);
@@ -142,7 +146,7 @@ ARCHITECTURE top OF zybo_top IS
 
 BEGIN  -- ARCHITECTURE top
 
-  je     <= fifo_tdata(7 DOWNTO 0);
+  je     <= out_fifo_tdata(7 DOWNTO 0);
   led(1) <= clk_locked;
   capture_ctrl_1 : ENTITY work.capture_ctrl
     GENERIC MAP (
@@ -162,12 +166,36 @@ BEGIN  -- ARCHITECTURE top
       par_trig_msk   => par_trig_msk,
       par_trig_val   => par_trig_val,
       capture_rdy    => led(0),
-      fifo_tdata     => fifo_tdata,
-      fifo_tvalid    => fifo_tvalid,
-      fifo_tlast     => fifo_tlast,
-      fifo_tready    => fifo_tready,
-      fifo_tfull     => fifo_tfull,
-      placeholder    => placeholder);
+      fifo_tdata     => in_fifo_tdata,
+      fifo_tvalid    => in_fifo_tvalid,
+      fifo_tlast     => in_fifo_tlast,
+      fifo_tready    => in_fifo_tready,
+      fifo_tfull     => in_fifo_tfull,
+      fifo_tempty    => in_fifo_tempty,
+      fifo_aresetn   => in_fifo_tflush);
+
+
+
+  sample_storage_block : ENTITY work.storage
+    GENERIC MAP (
+      FIFO_SIZE => 2**4)
+    PORT MAP (
+      clk             => run_clk,
+      reset           => reset,
+      --
+      in_fifo_tdata   => in_fifo_tdata,
+      in_fifo_tvalid  => in_fifo_tvalid,
+      in_fifo_tlast   => in_fifo_tlast,
+      in_fifo_tready  => in_fifo_tready,
+      in_fifo_tfull   => in_fifo_tfull,
+      in_fifo_tempty  => in_fifo_tempty,
+      in_fifo_tflush  => in_fifo_tflush,
+      --
+      out_fifo_tdata  => out_fifo_tdata,
+      out_fifo_tvalid => out_fifo_tvalid,
+      out_fifo_tlast  => out_fifo_tlast,
+      out_fifo_tready => '1');
+
   -----------------------------------------------------------------------------
   -- Component Instatiations
   -----------------------------------------------------------------------------
@@ -202,27 +230,27 @@ BEGIN  -- ARCHITECTURE top
       reset       <= '1';
       reset_dly_v := '1';
     ELSIF rising_edge(run_clk) THEN
-      IF clk_locked = '1' then
-      reset       <= reset_dly_v;
-      reset_dly_v := '0';
-    ELSE
-      reset       <= '1';
-      reset_dly_v := '1';
+      IF clk_locked = '1' THEN
+        reset       <= reset_dly_v;
+        reset_dly_v := '0';
+      ELSE
+        reset       <= '1';
+        reset_dly_v := '1';
+      END IF;
     END IF;
-  END IF;
-END PROCESS run_clk_reset_proc;
+  END PROCESS run_clk_reset_proc;
 
 
-reset_proc : PROCESS (reset_btn, clk) IS
-  VARIABLE reset_dly_v : STD_LOGIC;
-BEGIN  -- PROCESS reset_proc
-  IF reset_btn = '1' THEN
-    reset_clk_gen <= '1';
-  ELSIF rising_edge(clk) THEN
-    reset_clk_gen <= reset_dly_v;
-    reset_dly_v   := '0';
-  END IF;
-END PROCESS reset_proc;
+  reset_proc : PROCESS (reset_btn, clk) IS
+    VARIABLE reset_dly_v : STD_LOGIC;
+  BEGIN  -- PROCESS reset_proc
+    IF reset_btn = '1' THEN
+      reset_clk_gen <= '1';
+    ELSIF rising_edge(clk) THEN
+      reset_clk_gen <= reset_dly_v;
+      reset_dly_v   := '0';
+    END IF;
+  END PROCESS reset_proc;
 
 zynq : ENTITY work.design_1_wrapper
   PORT MAP (

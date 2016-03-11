@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : la_top.vhd
 -- Created    : 2016-02-22
--- Last update: 2016-03-09
+-- Last update: 2016-03-11
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: This is the top instatiting modue of the logic analyzer. This
@@ -58,17 +58,14 @@ BEGIN
   --entity-wide checks
   ASSERT IS_X(clk) = FALSE REPORT "clk is undefined" SEVERITY ERROR;
   ASSERT IS_X(din) = FALSE REPORT "din is undefined" SEVERITY ERROR;
-  ASSERT IS_X(uart_tx) = FALSE REPORT "uart_tx is undefined" SEVERITY ERROR;
+  ASSERT IS_X(uart_rx) = FALSE REPORT "uart_rx is undefined" SEVERITY ERROR;
 
 
 END ENTITY la_top;
 
 ARCHITECTURE structural OF la_top IS
 
-  SIGNAL clk             : STD_LOGIC;
-  SIGNAL rst             : STD_LOGIC                       := '0';
-  --
-  SIGNAL din             : STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
+
   SIGNAL armed           : STD_LOGIC;
   SIGNAL triggered       : STD_LOGIC;
   SIGNAL rst_cmd         : STD_LOGIC                       := '0';
@@ -103,7 +100,7 @@ BEGIN  -- ARCHITECTURE structural
       clk            => clk,
       rst            => rst,
       --
-      din            => din,
+      din            => din(7 DOWNTO 0),
       armed          => armed,
       triggered      => triggered,
       rst_cmd        => rst_cmd,
@@ -142,7 +139,7 @@ BEGIN  -- ARCHITECTURE structural
       out_fifo_tdata  => out_fifo_tdata,
       out_fifo_tvalid => out_fifo_tvalid,
       out_fifo_tlast  => out_fifo_tlast,
-      out_fifo_tready => out_fifo_tready);
+      out_fifo_tready => '1');
 
 
 END ARCHITECTURE structural;
