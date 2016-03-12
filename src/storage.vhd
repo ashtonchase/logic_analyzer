@@ -192,8 +192,7 @@ begin
                             if out_fifo_tready='1' then
                                 out_fifo_tvalid <= '1';
                                 out_state <= OUT_BYTE;
-                                -- Signal end of data on last byte, it is 2 instead of 3 since idx has not been updated yet
-                                if idx=2 and last_point=out_point then 
+                                if idx=3 and (last_point=out_point and last_point/=0) then 
                                     out_fifo_tlast <= '1';
                                 else
                                     out_fifo_tlast <= '0';
