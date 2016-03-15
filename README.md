@@ -11,3 +11,5 @@ Provide a means of downloading captured data to a computer.
 Develop testbenches for functional validation of design at each hierarchical level.
 Develop a simple device-under-test model for exercising and demonstrating the system capabilities.
 Demonstrate design implementation on FPGA development board, which is to be determined.
+
+Logic diagram: https://goo.gl/Ezfd42
