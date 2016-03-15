@@ -12,4 +12,4 @@ Develop testbenches for functional validation of design at each hierarchical lev
 Develop a simple device-under-test model for exercising and demonstrating the system capabilities.
 Demonstrate design implementation on FPGA development board, which is to be determined.
 
-Logic diagram: https://goo.gl/Ezfd42
+Logic diagram: https://goo.gl/L0DCAG
