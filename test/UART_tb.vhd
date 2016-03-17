@@ -41,33 +41,35 @@ library ieee;
 use IEEE.std_logic_1164.all;
 
 architecture test of UART_tb is
-signal data_in, data_out : STD_LOGIC_VECTOR(7 DOWNTO 0);
+signal data_in, data_out : STD_LOGIC_VECTOR(7 DOWNTO 0) => (others <= '0');
 signal stream_in_stb, stream_out_ack, rx, rst, tx, stream_out_stb, stream_in_ack : std_logic;
 signal clk, baud_clock : std_logic := '1';
 signal baud_counter : integer := 0;
-constant baud_total : INTEGER := 10_000_000/10_000;
+constant baud_rate : INTEGER := 10_000
+constant clock_freq : INTEGER := 10_000_000
+constant baud_total : INTEGER := clock_freq/baud_rate;
 begin
 	u1 : entity work.uart_comms
-	generic map (clock_freq => 10_000_000, baud_rate => 10_000)
+	generic map (clock_freq => clock_freq, baud_rate => baud_rate)
 	port map ( clk => clk,
-				rst => rst,
-				stream_in_stb => stream_in_stb,
-				stream_out_stb => stream_out_stb,
-				rx => rx,
-				data_in => data_in,
-				stream_in_ack => stream_in_ack,
-				stream_out_ack => stream_out_ack,
-				tx => tx,
-				data_out => data_out );
+			rst => rst,
+			stream_in_stb => stream_in_stb,
+			stream_out_stb => stream_out_stb,
+			rx => rx,
+			data_in => data_in,
+			stream_in_ack => stream_in_ack,
+			stream_out_ack => stream_out_ack,
+			tx => tx,
+			data_out => data_out );
 
 	process (clk)
 	begin
-		clk <= not clk after 10 ns;
+		clk <= not clk after 50 ns; -- 10 MHz clock
 	end process;
 	
 	baud_clocking : PROCESS (clk)
 	begin
-		if(clk = '1') then
+		if(clk = '1' and clk'event) then
 			if (baud_counter < baud_total) then
 				baud_counter <= baud_counter + 1;
 			else
@@ -79,17 +81,33 @@ begin
 	
 	process
 	begin
-	rx <= '1';
+	rx <= '1'; -- nothing
 	wait for 200 ms;
-	rx <= '0';
-	wait for 200 ms;
+	rx <= '0'; -- stb
+	wait for 100 ns;
+	rx <= '1'; -- 1
+	wait for 100 ns;
+	rx <= '0'; -- 2
+	wait for 100 ns;
+	rx <= '0'; -- 3
+	wait for 100 ns;
+	rx <= '1'; -- 4
+	wait for 100 ns;
+	rx <= '1'; -- 5
+	wait for 100 ns;
+	rx <= '1'; -- 6
+	wait for 100 ns
+	rx <= '0'; -- 7
+	wait for 100 ns
+	rx <= '0'; -- 8
+	wait for 100 ns
+	rx <= '1'; -- end
+	end process;
 	
-	wait for 200 ms;
-	
-	wait for 200 ms;
-	
-	wait for 200 ms;
-	
+	process
+	begin
+	wait for 1000 ms;
+	data_in <= "10100111";
 	end process;
 	
 end test;
