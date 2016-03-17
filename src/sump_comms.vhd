@@ -36,9 +36,9 @@ use work.all;
 
 entity SUMPComms is
 	port( 
-		rst				: in	STD_LOGIC;
-		clk				: in	STD_LOGIC;
-		rx				: in	STD_LOGIC; -- data line from top level
+		rst			: in	STD_LOGIC;
+		clk			: in	STD_LOGIC;
+		rx			: in	STD_LOGIC; -- data line from top level
 		tx_data		: in	STD_LOGIC_VECTOR(7 downto 0); -- data from storage
 		dataReady	: out STD_LOGIC;	-- flag for data message collect
 		command   : out STD_LOGIC_VECTOR(7 downto 0)); -- commands for message handler
@@ -54,16 +54,16 @@ architecture comms of SUMPComms is
 
 begin
 	uart : entity uart_comms port map(clk => clk;
-																		rst => rst;
-																		stream_tx_stb => stream_in_done;
-																		stream_rx_ack => stream_out_ready;
-																		rx => rx;
-																		data_in => tx_data;																
-																		stream_rx_stb => stream_read_done;
-																		stream_tx_ack => stream_trans_ready;
-																		tx => tx_line;
-																		data_out => rx_data);
-																		
+										rst => rst;
+										stream_tx_stb => stream_in_done;
+										stream_rx_ack => stream_out_ready;
+										rx => rx;
+										data_in => tx_data;																
+										stream_rx_stb => stream_read_done;
+										stream_tx_ack => stream_trans_ready;
+										tx => tx_line;
+										data_out => rx_data);
+
 	transmit : process (clk)
 	begin
 		

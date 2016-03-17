@@ -1,8 +1,8 @@
 -------------------------------------------------------------------------------
--- Title      : UART Entity
+-- Title      : UART
 -- Project    : fpga_logic_analyzer
 -------------------------------------------------------------------------------
--- File       : SUMPComms.vhd
+-- File       : UART.vhd
 -- Created    : 2016-02-22
 -- Last update: 2016-03-15
 -- Standard   : VHDL'08
@@ -39,7 +39,7 @@ ENTITY uart_comms IS
 	generic (baud_rate : positive;
 		 			clock_freq : positive); -- Make sure we keep integer division here
 
-				port(clk						:	in	STD_LOGIC;
+		port(clk						:	in	STD_LOGIC;
              rst						:	in	STD_LOGIC;
              stream_in_stb	:	in	STD_LOGIC;
              stream_out_ack	:	in	STD_LOGIC;
@@ -60,21 +60,25 @@ end ENTITY uart_comms;
 ARCHITECTURE pass_through OF uart_comms IS
 signal rx_counter, tx_counter : INTEGER RANGE 0 TO 255 := 0;
 signal trans_data: STD_LOGIC_VECTOR(7 DOWNTO 0) := (others => '0');
+signal data_out_sig	: STD_LOGIC_VECTOR(7 DOWNTO 0) := (others => '0');
 
-signal baud_clock, baud_clock_x16	: STD_LOGIC := '0';
-signal baud_counter, baud_counter_x16, sampling_counter, zero_counter : INTEGER RANGE 0 to 255;
-signal reset_baud : STD_LOGIC := '0';
-constant baud_total : INTEGER := baud_rate/clock_freq;
+
+signal baud_clock, baud_clock_x16 : STD_LOGIC := '0';
+signal baud_counter, baud_counter_x16, sampling_counter, zero_counter : INTEGER RANGE 0 to 255 := 0;
+signal baud_reset : STD_LOGIC := '0';
+constant baud_total : INTEGER := clock_freq/baud_rate;
 begin
 -- Recieve logic
 	baud_clocking_x16 : PROCESS (clk)
-		if(clk = '1') then
+	begin
+		if (clk = '1') then
 			if(baud_reset = '1') then
 				baud_counter_x16 <= 0;
 				baud_clock_x16 <= '0';
 			elsif (baud_counter_x16 < baud_total/16) then
 				baud_counter_x16 <= baud_counter_x16 + 1;
 			else
+				baud_counter_x16 <= 0;
 				baud_clock_x16 <= not baud_clock;
 			end if;
 		end if;
@@ -106,7 +110,7 @@ begin
 				if rx_counter < 8 then
 					stream_out_stb <= '0';
 					rx_counter <= rx_counter + 1;
-					data_out <= rx & data_out(7 downto 1); -- shift right
+					data_out_sig <= rx & data_out_sig(7 downto 1); -- shift right
 				
 				else
 					if rx = '1' then
@@ -116,7 +120,7 @@ begin
 						
 					else
 						stream_out_stb <= '0';
-						data_out <= (OTHERS => 'X');
+						data_out_sig <= (OTHERS => 'X');
 						zero_counter <= 0;
 					end if;
 					
@@ -125,14 +129,18 @@ begin
 		end if;
 	
 	end PROCESS reciever;
+	
+	data_out <= data_out_sig;
 
 -- Transmit logic
 	-- Create baud clock
 	baud_clocking : PROCESS (clk)
+	begin
 		if(clk = '1') then
 			if (baud_counter < baud_total) then
 				baud_counter <= baud_counter + 1;
 			else
+				baud_counter <= 0;
 				baud_clock <= not baud_clock;
 			end if;
 		end if;
@@ -141,8 +149,8 @@ begin
 	-- use baud clock and transmit data
 	transmitter : PROCESS (baud_clock)
 	begin
-		if(baud_clock = '1' and baud_clock'event) then
-			if tx_counter = '0' and trans_data /= data_in then --wait for data change (last /= current)
+		if baud_clock = '1' and baud_clock'event then
+			if tx_counter = 0 and trans_data /= data_in then --wait for data change (last /= current)
 				trans_data <= data_in;
 				tx_counter <= tx_counter + 1;
 				tx <= '0';			
