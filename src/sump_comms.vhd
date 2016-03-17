@@ -36,24 +36,33 @@ use work.all;
 
 entity SUMPComms is
 	port( 
-		rst			: in	STD_LOGIC;
-		clk			: in	STD_LOGIC;
-		rx			: in	STD_LOGIC; -- data line from top level
-		tx_data		: in	STD_LOGIC_VECTOR(7 downto 0); -- data from storage
-		dataReady	: out STD_LOGIC;	-- flag for data message collect
-		command   : out STD_LOGIC_VECTOR(7 downto 0)); -- commands for message handler
-		command_data 	: out STD_LOGIC_VECTOR(31 downto 0)); -- commands for message handler
+		rst					: in	STD_LOGIC;
+		clk					: in	STD_LOGIC;
+		rx					: in	STD_LOGIC; -- data line from top level
+		tx_data				: in	STD_LOGIC_VECTOR(7 downto 0); -- data from storage
+		ready_for_command	: in STD_LOGIC;	-- flag for data message collect
+		command_ready		: out STD_LOGIC;	-- flag for data message collect
+		
+		data_ready			: in STD_LOGIC;	-- flag for transmit message
+		data_sent			: out STD_LOGIC;	-- flag for transmit message
+		
+		command 			: out STD_LOGIC_VECTOR(7 downto 0)); -- commands for message handler
+		command_data 		: out STD_LOGIC_VECTOR(31 downto 0)); -- commands for message handler
 
 end entity SUMPComms;
+
+architecture comms of SUMPComms is
+
 	signal stream_in_done, stream_read_done, stream_trans_ready, stream_out_ready : std_logic;
 	signal rx_data : std_logic_vector(7 downto 0);
 	signal tx_line : std_logic;
 	signal command_count : integer range 0 to 15 := 0;
 	
-architecture comms of SUMPComms is
+	constant baud_rate : integer := 9600; -- sorta normal baud
+	constant clock_freq : integer := 10000000; -- 10MHz
 
 begin
-	uart : entity uart_comms port map(clk => clk;
+	uart : entity work.uart_comms port map(clk => clk;
 										rst => rst;
 										stream_tx_stb => stream_in_done;
 										stream_rx_ack => stream_out_ready;
@@ -66,24 +75,32 @@ begin
 
 	transmit : process (clk)
 	begin
-		
+	if clk = '1' and data_ready
 
 	end process transmit;
 	
 	recieve : process (clk)
 	begin
-		if clock = '1' and stream_read_done = '1' and command_count < 5 then
-			if command_count = 0 then
-				command <= rx_data;
-			else
-				command_data <= command_data(23 downto 0) & rx_data;
+		if clk = '1' then
+			if stream_read_done = '1' and command_count < 5 then
+				if command_count = 0 and ready_for_command = '1' then
+					command <= rx_data;
+				else
+					command_data <= command_data(23 downto 0) & rx_data;
+				end if;
+				command_count <= command_count + 1;
+				command_ready <= '0';
 			end if;
-			command_count <= command_count + 1;
-			dataReady <= '0';
 		else if command_count >= 5 then;
-			dataReady <= '0';
+			if ready_for_command = '0';
+				command_ready <= '1';
+			else
+				
+			end if;
 		end if;
 	end process recieve;
+	
+	
 																												
 end architecture comms;
 
