@@ -7,8 +7,22 @@
 -- Last update: 2016-02-29
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
--- Description: This is a RAM storage for recorded data and the input and 
--- output interface
+-- Summary: This is a RAM storage for recorded data and the input and 
+-- output interface.  It is responsible for generating RAM blocks to store
+-- the large amount of data needed for a logic analyzer.
+--
+-- Functional: The main component of this entity is an array of std logic vectors
+-- 32 bits wide.  All data will be stored in this addressed array.  There are 
+-- three pointer controlling its functionality: in_point, out_point, and last_point.
+-- In_point will store incoming data into the inferred RAM.  It will stop storing
+-- data when in_point equal the max size or if it receives a word with tlast high.
+-- Then it will sit until the RAM is empty.  
+--
+-- The out_point controls where data is being read out of the RAM.  It will read 
+-- out a word at a time.  It will pass a byte at a time to the UART interface.
+-- When out_point equals in_point, the RAM is empty.  When this occurs, all pointers
+-- will be re-initialized to 0.  When the last word of the RAM is fed out, the 
+-- last_out bit will be pulled high on the last byte.
 -------------------------------------------------------------------------------
 -- Copyright (c) 2016 Ashton Johnson, Paul Henny, Ian Swepston, David Hurt
 -------------------------------------------------------------------------------
