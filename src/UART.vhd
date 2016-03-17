@@ -78,7 +78,7 @@ begin
 				baud_clock_x16 <= not baud_clock;
 			end if;
 		end if;
-	end process baud_clocking;
+	end process baud_clocking_x16;
 
 	reciever: process (baud_clock_x16)
 	begin
