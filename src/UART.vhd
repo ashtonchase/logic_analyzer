@@ -7,7 +7,10 @@
 -- Last update: 2016-03-15
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
--- Description: This is the UART the sump comms module will use
+-- Description: This is the UART the sump comms module will use. It is capable
+-- of taking an input baud rate and clock frequency to run a baud clock using a
+-- clock divider. It transmits data when the transmit data (data_out)changes and
+-- recieves data when it recieves a low signal on the rx line.
 -------------------------------------------------------------------------------
 -- Copyright (c) 2016 Ashton Johnson, Paul Henny, Ian Swepston, David Hurt
 -------------------------------------------------------------------------------
@@ -37,19 +40,18 @@ library ieee;
 
 ENTITY uart_comms IS
 	generic (baud_rate : positive;
-		 			clock_freq : positive); -- Make sure we keep integer division here
+		 clock_freq : positive); -- Make sure we keep integer division here
 
-		port(clk						:	in	STD_LOGIC;
-             rst						:	in	STD_LOGIC;
-             stream_in_stb	:	in	STD_LOGIC;
-             stream_out_ack	:	in	STD_LOGIC;
-             rx							:	in	STD_LOGIC;
-             data_in				: 	in	STD_LOGIC_VECTOR(7 DOWNTO 0) := (others => '0');
-		
-             stream_out_stb	:	out	STD_LOGIC;
-             stream_in_ack	:	out	STD_LOGIC;
-             tx	        		:	out	STD_LOGIC := '1';
-             data_out				: 	out	STD_LOGIC_VECTOR(7 DOWNTO 0) := (others => '0'));
+	port(	clk				:	in	STD_LOGIC; -- clock
+        	rst				:	in	STD_LOGIC; -- reset logic
+            stream_in_stb	:	in	STD_LOGIC; -- stop bit found for stream in
+            stream_out_ack	:	in	STD_LOGIC; -- stream out ready
+            rx				:	in	STD_LOGIC; -- recieve line
+            data_in			: 	in	STD_LOGIC_VECTOR(7 DOWNTO 0) := (others => '0'); -- data to be transmitted
+		    stream_out_stb	:	out	STD_LOGIC; -- stream out stop bit sent
+            stream_in_ack	:	out	STD_LOGIC; -- ready for rx
+            tx	       		:	out	STD_LOGIC := '1'; -- transmit line
+            data_out		: 	out	STD_LOGIC_VECTOR(7 DOWNTO 0) := (others => '0')); -- data recieved from rx line
 
 begin 
 
