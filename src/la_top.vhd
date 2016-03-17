@@ -1,162 +1,193 @@
+-------------------------------------------------------------------------------
+-- Title      : Logic Analyzer Top Module
+-- Project    : fpga_logic_analyzer
+-------------------------------------------------------------------------------
+-- File       : la_top.vhd
+-- Created    : 2016-02-22
+-- Last update: 2016-03-17
+-- Standard   : VHDL'08
+-------------------------------------------------------------------------------
+-- Description: This is the top instatiting modue of the logic analyzer. This
+-- will define the generic I/O interfaces to the system. Ideally, all modules
+-- below this will be portable to whatever your target hardware will be.
+--
+-- Stucture:
+--         -----------
+--    RX   |   UART  |
+--    -----|         |
+--         |         |
+--    TX   |         |
+--    -----|         |
+--         |         |
+--         |         |
+--         ----------- 
+-------------------------------------------------------------------------------
+-- Copyright (c) 2016 Ashton Johnson, Paul Henny, Ian Swepston, David Hurt
+-------------------------------------------------------------------------------
+-- This program is free software; you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation; either version 2 of the License, or
+-- (at your option) any later version.
 
-ARCHITECTURE behavioral OF capture_ctrl IS
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
 
+-- You should have received a copy of the GNU General Public License along
+-- with this program; if not, write to the Free Software Foundation, Inc.,
+-- 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+-------------------------------------------------------------------------------
+-- Revisions  :
+-- Date        Version      Author      Description
+-- 2016-02-22      1.0      ashton      Created
+-- 2016-03-09      1.1      ashton      Added sample_storage_block and
+--                                      DATA_WIDTH and SAMPLE_DEPTH generics.
+-------------------------------------------------------------------------------
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
-  --entity related signals
-  SIGNAL din_ff           : STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0) := (OTHERS => '1');
-  SIGNAL armed_o          : STD_LOGIC                               := '0';
-  SIGNAL triggered_o      : STD_LOGIC                               := '0';
-  SIGNAL sample_cnt_rst_o : STD_LOGIC                               := '1';
-  SIGNAL delay_cnt_4x_l   : STD_LOGIC_VECTOR(16-1 DOWNTO 0)         := (OTHERS => '0');
-  SIGNAL read_cnt_4x_l    : STD_LOGIC_VECTOR(16-1 DOWNTO 0)         := (OTHERS => '1');
-  SIGNAL par_trig_msk_l   : STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0) := (OTHERS => '0');
-  SIGNAL par_trig_val_l   : STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0) := (OTHERS => '1');
-  SIGNAL capture_rdy_o    : STD_LOGIC                               := '0';
-  SIGNAL fifo_tdata_o     : STD_LOGIC_VECTOR(32-1 DOWNTO 0)         := (OTHERS => '1');
-  SIGNAL fifo_tvalid_o    : STD_LOGIC                               := '0';
-  SIGNAL fifo_tlast_o     : STD_LOGIC                               := '0';
+entity la_top is
 
-  SIGNAL trig : STD_LOGIC :='0';
-
-  --state machine signals
-  TYPE state_t IS (INIT, WAIT_FOR_ARM_CMD, WAIT_FOR_TRIGGER, DELAY_HOLD, CAPTURE_DATA);
-  SIGNAL state : state_t := INIT;
-
-  --capture count
-  SIGNAL capture_cnt,capture_cnt_plus, delay_cnt, delay_cnt_plus : NATURAL RANGE 0 TO 262_141+1 := 0;
- 
-
-BEGIN  -- ARCHITECTURE behavioral
-
-  --fast trigger detect
-  trig <='1' when ((din_ff AND par_trig_val_l) = par_trig_msk_l) else
-         '0';
-  --fast adds
-  capture_cnt_plus<=capture_cnt + 1; 
-  delay_cnt_plus<=delay_cnt+1;
-  -----------------------------------------------------------------------------
-  -- Concurrent assigments
-  -----------------------------------------------------------------------------
-  --fifo assignments
-  fifo_tdata  <= fifo_tdata_o;
-  fifo_tvalid <= fifo_tvalid_o;
-  fifo_tlast  <= fifo_tlast_o;
-  --mp_assignemets
-  capture_rdy <= capture_rdy_o;
-  --top lelel assigments
-  armed       <= armed_o;
-  triggered   <= triggered_o;
-  sample_cnt_rst <= sample_cnt_rst_o;
-
-  -----------------------------------------------------------------------------
-  -- Processes
-  -----------------------------------------------------------------------------
-  -- purpose: this is the main capture process encapsulating a state machine
-  -- type   : sequential
-  -- inputs : clk, rst
-  -- outputs: 
-  capture_process : PROCESS (clk) IS
-    PROCEDURE inc (
-      SIGNAL val_to_inc : INOUT NATURAL) IS
-    BEGIN
-      val_to_inc <= val_to_inc+1;
-    END PROCEDURE;
-
-  BEGIN  -- PROCESS capture_process
-    is_clk : IF rising_edge(clk) THEN   -- rising clock edge
-      --default assigments
-      din_ff                              <= din;
-      fifo_tdata_o                        <= (OTHERS => '-');
-      fifo_tdata_o(DATA_WIDTH-1 DOWNTO 0) <= din_ff;
-      fifo_tvalid_o                       <= '0';
-      fifo_tlast_o                        <= '0';
-      sample_cnt_rst_o                    <= '1';
-      capture_rdy_o                       <= '0';
-      fifo_aresetn                        <= '0';
-
-      is_rst : IF rst = '1' THEN        -- synchronous reset (active high)
-        state <= INIT;
-        fifo_aresetn                        <= '1';
-      ELSE
-        fsm : CASE state IS
-          WHEN INIT =>
-            is_fifo_ready : IF fifo_tready = '1' THEN
-              state       <= WAIT_FOR_ARM_CMD;
-              capture_cnt <= 0;
-              delay_cnt   <= 0;
-              armed_o     <= '0';
-              triggered_o <= '0';
-            END IF is_fifo_ready;
-          -------------------------------------------------------------------
-          WHEN WAIT_FOR_ARM_CMD =>
-            par_trig_msk_l <= par_trig_msk(DATA_WIDTH-1 DOWNTO 0);
-            par_trig_val_l <= par_trig_val(DATA_WIDTH-1 DOWNTO 0);
-            delay_cnt_4x_l <= delay_cnt_4x;
-            read_cnt_4x_l  <= delay_cnt_4x;
-            capture_rdy_o  <= '1';
-            is_arm : IF arm_cmd = '1' THEN
-              state   <= WAIT_FOR_TRIGGER;
-              armed_o <= '1';
-            END IF is_arm;
-          -------------------------------------------------------------------
-          WHEN WAIT_FOR_TRIGGER =>
-
-            is_trigged : IF trig='1' THEN
-              --go delay if requred
-              should_delay : IF delay_cnt_4x_l = X"00_00" THEN
-                state            <= CAPTURE_DATA;
-                sample_cnt_rst_o <= '0';
-                fifo_tvalid_o    <= '1';
-              ELSE
-                state <= DELAY_HOLD;
-              END IF should_delay;
-              triggered_o <= '1';
-              capture_cnt<=capture_cnt_plus;
-            END IF is_trigged;
-          -------------------------------------------------------------------
-          WHEN DELAY_HOLD =>
-            is_dly_done : IF (delay_cnt = to_integer(UNSIGNED(delay_cnt_4x_l))*8) THEN
-              delay_cnt <= 0;
-              state     <= CAPTURE_DATA;
-            ELSIF sample_enable = '1' THEN
-             delay_cnt<=delay_cnt_plus;
-            END IF is_dly_done;
-          -------------------------------------------------------------------
-          WHEN CAPTURE_DATA =>
-            --keep sample rate clock from being reset
-            sample_cnt_rst_o <= '0';
-            triggered_o      <= '1';
-
-            --will the next sample be the last one, the go ahead an assert tlast.
-            is_ready_for_tlast : IF (capture_cnt+1 = to_integer(UNSIGNED(read_cnt_4x_l))*8) THEN
-              fifo_tlast_o <= '1';
-            END IF is_ready_for_tlast;
-
-            is_done : IF (capture_cnt = to_integer(UNSIGNED(read_cnt_4x_l))*8) THEN
-              state     <= INIT;
-              delay_cnt <= 0;
-            --else more samples to collect
-            ELSIF delay_cnt_4x_l = X"00_00" THEN
-            capture_cnt<=capture_cnt_plus;
-              fifo_tvalid_o <= '1';
-            ELSIF sample_enable = '1' THEN
-            capture_cnt<=capture_cnt_plus;
-              fifo_tvalid_o <= '1';
-
-            END IF is_done;
-          -------------------------------------------------------------------
-          WHEN OTHERS => NULL;
-        END CASE fsm;
-
-      END IF is_rst;
-    END IF is_clk;
-  END PROCESS capture_process;
+  generic (
+    INPUT_CLK_RATE_HZ : positive range 10_000_000 to 200_000_000 := 100_000_000;
+    DATA_WIDTH        : positive range 1 to 32                   := 8;
+    SAMPLE_DEPTH      : positive range 1 to 2**18                := 2**8);
+  port (
+    --COMMON INTERFACES
+    clk     : in  std_logic;            --clock
+    rst     : in  std_logic                     := '0';  --reset, (async high/ sync low)
+    --data input. defaulte to zeroes so you don't have to hook all 32 lines up.
+    din     : in  std_logic_vector(31 downto 0) := (others => '0');
+    --UART INTERFACES
+    uart_rx : in  std_logic;            -- UART Receive Data
+    uart_tx : out std_logic);           -- UART Transmit Data
+begin
 
 
+  --entity-wide checks
+  assert IS_X(clk) = false report "clk is undefined" severity error;
+  assert IS_X(din) = false report "din is undefined" severity error;
+  assert IS_X(uart_rx) = false report "uart_rx is undefined" severity error;
 
------------------------------------------------------------------------------
--- Component Instantiations
------------------------------------------------------------------------------
+
+end entity la_top;
+
+architecture structural of la_top is
 
 
-END ARCHITECTURE behavioral;
+  signal armed           : std_logic;
+  signal triggered       : std_logic;
+  signal rst_cmd         : std_logic                       := '0';
+  signal arm_cmd         : std_logic;
+  signal sample_enable   : std_logic                       := '1';
+  signal sample_cnt_rst  : std_logic;
+  signal delay_cnt_4x    : std_logic_vector(16-1 downto 0) := (others => '0');
+  signal read_cnt_4x     : std_logic_vector(16-1 downto 0) := (others => '1');
+  signal par_trig_msk    : std_logic_vector(32-1 downto 0) := (others => '0');
+  signal par_trig_val    : std_logic_vector(32-1 downto 0) := (others => '1');
+  signal capture_rdy     : std_logic;
+  --
+  signal in_fifo_tdata   : std_logic_vector(31 downto 0);
+  signal in_fifo_tvalid  : std_logic;
+  signal in_fifo_tlast   : std_logic;
+  signal in_fifo_tready  : std_logic;
+  signal in_fifo_tfull   : std_logic;
+  signal in_fifo_tempty  : std_logic;
+  signal in_fifo_tflush  : std_logic;
+  --
+  signal out_fifo_tdata  : std_logic_vector(7 downto 0);
+  signal out_fifo_tvalid : std_logic;
+  signal out_fifo_tlast  : std_logic;
+  signal out_fifo_tready : std_logic;
+
+begin  -- ARCHITECTURE structural
+
+  capture_control_block : entity work.capture_ctrl
+    generic map (
+      DATA_WIDTH => DATA_WIDTH)
+    port map (
+      clk            => clk,
+      rst            => rst,
+      --
+      din            => din(7 downto 0),
+      armed          => armed,
+      triggered      => triggered,
+      rst_cmd        => rst_cmd,
+      arm_cmd        => arm_cmd,
+      sample_enable  => sample_enable,
+      sample_cnt_rst => sample_cnt_rst,
+      delay_cnt_4x   => delay_cnt_4x,
+      read_cnt_4x    => read_cnt_4x,
+      par_trig_msk   => par_trig_msk,
+      par_trig_val   => par_trig_val,
+      capture_rdy    => capture_rdy,
+      --
+      fifo_tdata     => in_fifo_tdata,
+      fifo_tvalid    => in_fifo_tvalid,
+      fifo_tlast     => in_fifo_tlast,
+      fifo_tready    => in_fifo_tready,
+      fifo_tfull     => in_fifo_tfull,
+      fifo_tempty    => in_fifo_tempty,
+      fifo_aresetn   => in_fifo_tflush);
+
+  sample_storage_block : entity work.storage
+    generic map (
+      FIFO_SIZE => SAMPLE_DEPTH)
+    port map (
+      clk             => clk,
+      reset           => rst,
+      --
+      in_fifo_tdata   => in_fifo_tdata,
+      in_fifo_tvalid  => in_fifo_tvalid,
+      in_fifo_tlast   => in_fifo_tlast,
+      in_fifo_tready  => in_fifo_tready,
+      in_fifo_tfull   => in_fifo_tfull,
+      in_fifo_tempty  => in_fifo_tempty,
+      in_fifo_tflush  => in_fifo_tflush,
+      --
+      out_fifo_tdata  => out_fifo_tdata,
+      out_fifo_tvalid => out_fifo_tvalid,
+      out_fifo_tlast  => out_fifo_tlast,
+      out_fifo_tready => '1');
+
+
+  SUMP_UART_block : SUMPComms
+    port map (
+      clk               => clk,
+      rst               => rst,
+      rx                => uart_rx,
+      tx                => uart_tx,
+      tx_command        => tx_command,
+      ready_for_command => ready_for_command,
+      command_ready     => command_ready,
+      data_ready        => data_ready,
+      data_sent         => data_sent,
+      command           => command);
+
+  Message_processing_block : msg_prog
+    port map (
+      clk               => clk,
+      rst               => rst,
+      --
+      command_valid     => command_ready,
+      command           => command,
+      data              => command_data,
+      --
+      ready_for_command => ready_for_command,
+      comand_ready      => command_ready,
+      --outputs
+      arm_cmd           => arm_cmd,
+      rst_cmd           => rst_cmd,
+      sample_enable     => sample_enable,
+      sample_cnt_rst    => sample_cnt_rst,
+      delay_cnt_4x      => delay_cnt_4x,
+      read_cnt_4x       => read_cnt_4x,
+      par_trig_msk      => par_trig_msk,
+      par_trig_val      => par_trig_val,
+      capture_rdy       => capture_rdy,
+      )
+
+end architecture structural;
+
