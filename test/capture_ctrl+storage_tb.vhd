@@ -60,7 +60,7 @@ ARCHITECTURE acj_func_test OF capture_ctrl_storage_tb IS
   SIGNAL arm_cmd         : STD_LOGIC                               := '0';
   SIGNAL sample_enable   : STD_LOGIC                               := '0';
   SIGNAL sample_cnt_rst  : STD_LOGIC;
-  SIGNAL read_cnt_4x     : STD_LOGIC_VECTOR(16-1 DOWNTO 0)         := STD_LOGIC_VECTOR(to_unsigned(1000, 16));
+  SIGNAL read_cnt_4x     : STD_LOGIC_VECTOR(16-1 DOWNTO 0)        := (OTHERS => '1');-- := STD_LOGIC_VECTOR(to_unsigned(1000, 16));
   SIGNAL par_trig_msk    : STD_LOGIC_VECTOR(32-1 DOWNTO 0)         := X"FE_6B_28_40";
   SIGNAL par_trig_val    : STD_LOGIC_VECTOR(32-1 DOWNTO 0)         := (OTHERS => '1');
   SIGNAL capture_rdy     : STD_LOGIC;
@@ -111,8 +111,8 @@ BEGIN  -- ARCHITECTURE acj_func_test
       fifo_aresetn   => in_fifo_tflush);
 
   sample_storage_block : ENTITY work.storage
---    GENERIC MAP (
---      FIFO_SIZE => SAMPLE_DEPTH)
+    GENERIC MAP (
+      FIFO_SIZE => 2**18)
     PORT MAP (
       clk             => clk,
       reset           => rst,

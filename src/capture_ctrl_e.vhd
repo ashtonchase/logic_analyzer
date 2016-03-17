@@ -4,12 +4,45 @@
 -------------------------------------------------------------------------------
 -- File       : la_ctrl_e.vhd
 -- Created    : 2016-02-22
--- Last update: 2016-02-27
+-- Last update: 2016-03-16
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
--- Description: This entity module is the primary capture controller of the
--- Analyzer Module.
--------------------------------------------------------------------------------
+-- SUMMARY: This entity module is the primary capture controller of the
+-- Logic Analyzer. It responsible for matching the trigger mask to the sampled
+-- data bus, and the passing the requested amount of data out.
+--
+-- FUNCTIONAL DESCRIPTION:
+-- Upon startup/reset, the controll will wait until the downstream fifo is
+-- ready by the asserted fifo_tready before proceeding. Once the fifo is ready,
+-- the capture_rdy flag will be asserted. In this state, the controller is
+-- continuously reading the parallel triggere mask, trigger value, number of
+-- read counts and number of delay counts on the inputs. When the arm command
+-- it asserted, these values will be locked in and the ARMED signal will be
+-- asserted for the remained of the capture cycle. Once ARMED, the data input
+-- (din) will be masked and compared against a the masked trigger values. If
+-- there is a match, the controller will either delay for the specified number
+-- of delay cycles (delay_cnt_4x) or start capturing data. Data will be captured
+-- for the specified depth (ready_cnt_4x).
+--
+-- SAMPLE RATE CONTROL:
+-- During the delay and capture cycles, valid capture cycles will occur when
+-- sample_enable is asserted, otherwise the sampled data is not flaged as valid.
+-- This allowed for a divided sample rate. 
+--
+-- FIFO Interface:
+-- Capured data is deliverd via the output fifo inteface, based upon the
+-- AXI-Stream standard. Input sample data is continuously pulled from din
+-- and placed on fifo_tdata. Fifo_tvalid indicates is that data should be
+-- stored/transmitted as valid data. This allows for minimized logic around
+-- the datapath through this module. fifo_tlast will be assered on the last
+-- cycle of valid sampled data.
+--  NOTE: fifo_tready is only monitored at the start of the capture process.
+-- It is checked at the start to make sure that the fifo is ready before data
+-- is attempted to be sampled. Traditionally with an AXI-Stream interface a
+-- valid transaction occurs when tvalid and tready are both asserted for a
+-- give clock cycle; however, since the input data can't be paused, the
+-- capture controller must pass the data ever valid cycle of the triggered process.
+-------------------------------------------------------I------------------------
 -- Copyright (c) 2016 Ashton Johnson, Paul Henny, Ian Swepston, David Hurt
 -------------------------------------------------------------------------------
 -- This program is free software; you can redistribute it and/or modify

@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : la_ctrl_ea.vhd
 -- Created    : 2016-02-27
--- Last update: 2016-02-27
+-- Last update: 2016-03-16
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: This entity module is the primary capture controller of the
@@ -114,12 +114,7 @@ ARCHITECTURE behavioral OF capture_ctrl IS
 
   --capture count
   SIGNAL capture_cnt,capture_cnt_plus, delay_cnt, delay_cnt_plus : NATURAL RANGE 0 TO 262_141+1 := 0;
-  
-  attribute MARK_DEBUG : string;
-  attribute MARK_DEBUG of armed_o, triggered_o, capture_cnt, state: signal is "TRUE";
-                  
-                  
-
+ 
 
 BEGIN  -- ARCHITECTURE behavioral
 
