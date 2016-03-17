@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : UART.vhd
 -- Created    : 2016-02-22
--- Last update: 2016-03-15
+-- Last update: 2016-03-17
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: This is the UART the sump comms module will use. It is capable
@@ -43,23 +43,26 @@ ENTITY uart_comms IS
 		 clock_freq : positive); -- Make sure we keep integer division here
 
 	port(	clk				:	in	STD_LOGIC; -- clock
-        	rst				:	in	STD_LOGIC; -- reset logic
-            stream_in_stb	:	in	STD_LOGIC; -- stop bit found for stream in
-            stream_out_ack	:	in	STD_LOGIC; -- stream out ready
-            rx				:	in	STD_LOGIC; -- recieve line
-            data_in			: 	in	STD_LOGIC_VECTOR(7 DOWNTO 0) := (others => '0'); -- data to be transmitted
+        rst				:	in	STD_LOGIC; -- reset logic
+        rx_get_more_data	:	in	STD_LOGIC; -- stop bit found for stream in
+        rx_data_ready			:	out	STD_LOGIC; -- stream out ready
+        rx				:	in	STD_LOGIC; -- recieve line
+        data_in			: 	in	STD_LOGIC_VECTOR(7 DOWNTO 0) := (others => '0'); -- data to be transmitted
 		    stream_out_stb	:	out	STD_LOGIC; -- stream out stop bit sent
-            stream_in_ack	:	out	STD_LOGIC; -- ready for rx
-            tx	       		:	out	STD_LOGIC := '1'; -- transmit line
-            data_out		: 	out	STD_LOGIC_VECTOR(7 DOWNTO 0) := (others => '0')); -- data recieved from rx line
+        stream_in_ack	:	out	STD_LOGIC; -- ready for rx
+        tx	       		:	out	STD_LOGIC := '1'; -- transmit line
+        data_out		: 	out	STD_LOGIC_VECTOR(7 DOWNTO 0) := (others => '0')); -- data recieved from rx line
 
-begin 
+begin                                   --added comment
 
 ASSERT(clock_freq mod baud_rate = 0) REport ("Non Integer Division") SEVERITY(ERROR);
 
 end ENTITY uart_comms;
 
 ARCHITECTURE pass_through OF uart_comms IS
+type states is (Init, Wait_State, Get_Data, Send_Data, Data_Ready, Send_Complete);
+signal rx_current_state, rx_next_state, tx_current_state, tx_next_state : states;
+
 signal rx_counter, tx_counter : INTEGER RANGE 0 TO 255 := 0;
 signal trans_data: STD_LOGIC_VECTOR(7 DOWNTO 0) := (others => '0');
 signal data_out_sig	: STD_LOGIC_VECTOR(7 DOWNTO 0) := (others => '0');
@@ -70,13 +73,28 @@ signal baud_counter, baud_counter_x16, sampling_counter, zero_counter : INTEGER 
 signal baud_reset : STD_LOGIC := '0';
 constant baud_total : INTEGER := clock_freq/baud_rate;
 begin
--- Recieve logic
+
+	-- Create baud clock
+	baud_clocking : PROCESS (clk)
+	begin
+		if(clk = '1') then
+			if (baud_counter < baud_total) then
+				baud_counter <= baud_counter + 1;
+			else
+				baud_counter <= 0;
+				baud_clock <= not baud_clock;
+			end if;
+		end if;
+	end process baud_clocking;
+
+
 	baud_clocking_x16 : PROCESS (clk)
 	begin
 		if (clk = '1') then
 			if(baud_reset = '1') then
 				baud_counter_x16 <= 0;
 				baud_clock_x16 <= '0';
+				baud_reset <= '0';
 			elsif (baud_counter_x16 < baud_total/16) then
 				baud_counter_x16 <= baud_counter_x16 + 1;
 			else
@@ -85,6 +103,64 @@ begin
 			end if;
 		end if;
 	end process baud_clocking_x16;
+
+
+
+	-- State transition logic for RX
+	rx_states : process (baud_clock_x16)
+	begin
+		if baud_clock_x16 = '1' and baud_clock_x16'event then
+			rx_data_ready <= '0';
+			
+			case rx_current_state is
+				when Init =>
+					rx_next_state <= Wait_State;
+					
+				when Wait_State =>
+					rx_next_state <= Wait_State;
+					
+					if zero_counter < 9 then
+						if rx = '0' then
+							zero_counter <= zero_counter + 1;
+						else
+							zero_counter <= 0;
+						end if;	
+					else 
+						rx_next_state <= Get_Data;
+						baud_reset <= '1';
+						sampling_counter <= 0;
+						rx_counter <= 0;
+					end if;
+
+				when Get_Data =>
+					rx_next_state <= Get_Data;
+					if sampling_counter < 15 then
+						sampling_counter <= sampling_counter + 1;
+					else
+						sampling_counter <= 0;
+						if rx_counter < 8 then
+							rx_counter <= rx_counter + 1;
+							data_out_sig <= rx & data_out_sig(7 downto 1); -- shift right
+						else
+							rx_counter <= 0;
+							rx_next_state <= Data_Ready;
+						end if;						
+					end if;
+
+				when Data_Ready =>
+					rx_next_state <= Data_Ready;
+					rx_data_ready <= '1';
+					if rx_get_more_data <= '1' then
+						rx_next_state <= Wait_State;
+					end if;					
+			end select;
+		end if;
+		rx_current_state <= rx_next_state;
+	end process rx_states;
+
+	
+
+
 
 	reciever: process (baud_clock_x16)
 	begin
@@ -134,19 +210,7 @@ begin
 	
 	data_out <= data_out_sig;
 
--- Transmit logic
-	-- Create baud clock
-	baud_clocking : PROCESS (clk)
-	begin
-		if(clk = '1') then
-			if (baud_counter < baud_total) then
-				baud_counter <= baud_counter + 1;
-			else
-				baud_counter <= 0;
-				baud_clock <= not baud_clock;
-			end if;
-		end if;
-	end process baud_clocking;
+
 	
 	-- use baud clock and transmit data
 	transmitter : PROCESS (baud_clock)
