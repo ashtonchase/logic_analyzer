@@ -39,7 +39,7 @@ entity SUMPComms is
 		rst					: in	STD_LOGIC;
 		clk					: in	STD_LOGIC;
 		rx					: in	STD_LOGIC; -- data line from top level
-		tx_data				: in	STD_LOGIC_VECTOR(7 downto 0); -- data from storage
+		tx_command				: in	STD_LOGIC_VECTOR(31 downto 0); -- data from storage
 		ready_for_command	: in STD_LOGIC;	-- flag for data message collect
 		command_ready		: out STD_LOGIC;	-- flag for data message collect
 		
@@ -54,7 +54,7 @@ end entity SUMPComms;
 architecture comms of SUMPComms is
 
 	signal stream_in_done, stream_read_done, stream_trans_ready, stream_out_ready : std_logic;
-	signal rx_data : std_logic_vector(7 downto 0);
+	signal rx_data, tx_data : std_logic_vector(7 downto 0);
 	signal tx_line : std_logic;
 	signal command_count : integer range 0 to 15 := 0;
 	
@@ -75,7 +75,9 @@ begin
 
 	transmit : process (clk)
 	begin
-	if clk = '1' and data_ready
+	if clk = '1' and data_ready = '1' and stream_in_done = '1' then
+		tx_data <= tx_command (31 downto 24);
+	end if;
 
 	end process transmit;
 	
