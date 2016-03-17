@@ -4,11 +4,15 @@
 -------------------------------------------------------------------------------
 -- File       : SUMPComms.vhd
 -- Created    : 2016-02-22
--- Last update: 2016-02-22
+-- Last update: 2016-03-17
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: This is the top module for comms between the SUMP module and
--- the logic analyzer. It will handle the RS232 communication.
+-- the logic analyzer. It will handle the RS232 communication. It will handle
+-- coordination with the message passing and memory modules using data lines
+-- and handshaking.
+-- The clock rate and baud rate need to be specified in this module.
+-- This will be converted to a state machine
 -------------------------------------------------------------------------------
 -- Copyright (c) 2016 Ashton Johnson, Paul Henny, Ian Swepston, David Hurt
 -------------------------------------------------------------------------------
@@ -35,19 +39,18 @@ use ieee.std_logic_1164.all;
 use work.all;
 
 entity SUMPComms is
-	port( 
-		rst					: in	STD_LOGIC;
-		clk					: in	STD_LOGIC;
-		rx					: in	STD_LOGIC; -- data line from top level
-		tx_command				: in	STD_LOGIC_VECTOR(31 downto 0); -- data from storage
-		ready_for_command	: in STD_LOGIC;	-- flag for data message collect
-		command_ready		: out STD_LOGIC;	-- flag for data message collect
-		
-		data_ready			: in STD_LOGIC;	-- flag for transmit message
-		data_sent			: out STD_LOGIC;	-- flag for transmit message
-		
-		command 			: out STD_LOGIC_VECTOR(7 downto 0)); -- commands for message handler
-		command_data 		: out STD_LOGIC_VECTOR(31 downto 0)); -- commands for message handler
+	port( 	clk					: in	STD_LOGIC; -- clock
+			rst					: in	STD_LOGIC; -- reset
+			rx					: in	STD_LOGIC; -- data line from top level
+			tx_command			: in	STD_LOGIC_VECTOR(31 downto 0); -- data from storage
+			ready_for_command	: in STD_LOGIC;	-- flag for data message collect
+			command_ready		: out STD_LOGIC;	-- flag for data message collect
+			
+			data_ready			: in STD_LOGIC;	-- flag for transmit message
+			data_sent			: out STD_LOGIC;	-- flag for transmit message
+			
+			command 			: out STD_LOGIC_VECTOR(7 downto 0)); -- commands for message handler
+			command_data 		: out STD_LOGIC_VECTOR(31 downto 0)); -- commands for message handler
 
 end entity SUMPComms;
 
