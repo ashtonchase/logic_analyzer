@@ -62,8 +62,8 @@ ENTITY zybo_top IS
     LD0, LD1, LD2, LD3, LD4, LD5, LD6, LD7 : OUT STD_LOGIC;
     --Buttons 
     BTNC, BTND, BTNL, BTNR, BTNU : IN  STD_LOGIC;  
-    --Temporary Data Ouput 
-    JA7,JA6,JA5,JA4,JA3,JA2,JA1,JA0 : OUT STD_LOGIC
+    --Temporary Data Ouput (JA10-JA7, JA4-JA1) 
+    JA10,JA9,JA8,JA7,JA4,JA3,JA2,JA1 : OUT STD_LOGIC
     );
 
 END ENTITY zybo_top;
@@ -149,14 +149,14 @@ ARCHITECTURE top OF zybo_top IS
 
 BEGIN  -- ARCHITECTURE top
 
-  JA7<=out_fifo_tdata(7);
-  JA6<=out_fifo_tdata(6);
-  JA5<=out_fifo_tdata(5);
-  JA4<=out_fifo_tdata(4);
-  JA3<=out_fifo_tdata(3);
-  JA2<=out_fifo_tdata(2);
-  JA1<=out_fifo_tdata(1);
-  JA0<=out_fifo_tdata(0);
+  JA10<=out_fifo_tdata(7);
+  JA9<=out_fifo_tdata(6);
+  JA8<=out_fifo_tdata(5);
+  JA7<=out_fifo_tdata(4);
+  JA4<=out_fifo_tdata(3);
+  JA3<=out_fifo_tdata(2);
+  JA2<=out_fifo_tdata(1);
+  JA1<=out_fifo_tdata(0);
   
   LD1 <= clk_locked;
   capture_ctrl_1 : ENTITY work.capture_ctrl
