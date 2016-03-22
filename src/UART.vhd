@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : UART.vhd
 -- Created    : 2016-02-22
--- Last update: 2016-03-20
+-- Last update: 2016-03-22
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: This is the UART the sump comms module will use. It is capable
