@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : zybo_top_capture_cotnrol_test.vhd
 -- Created    : 2016-02-22
--- Last update: 2016-03-21
+-- Last update: 2016-03-22
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: Xilinx Zynq 7000 on a Digilent Zybo Board Top Level Module, 
@@ -35,35 +35,40 @@ USE ieee.numeric_std.ALL;
 ENTITY zybo_top IS
 
   PORT (
-    GCLK : IN  STD_LOGIC;                     -- 100 MHz clock
-    --Fixed Zync Signals
-    DDR_addr          : INOUT STD_LOGIC_VECTOR (14 DOWNTO 0);
-    DDR_ba            : INOUT STD_LOGIC_VECTOR (2 DOWNTO 0);
-    DDR_cas_n         : INOUT STD_LOGIC;
-    DDR_ck_n          : INOUT STD_LOGIC;
-    DDR_ck_p          : INOUT STD_LOGIC;
-    DDR_cke           : INOUT STD_LOGIC;
-    DDR_cs_n          : INOUT STD_LOGIC;
-    DDR_dm            : INOUT STD_LOGIC_VECTOR (3 DOWNTO 0);
-    DDR_dq            : INOUT STD_LOGIC_VECTOR (31 DOWNTO 0);
-    DDR_dqs_n         : INOUT STD_LOGIC_VECTOR (3 DOWNTO 0);
-    DDR_dqs_p         : INOUT STD_LOGIC_VECTOR (3 DOWNTO 0);
-    DDR_odt           : INOUT STD_LOGIC;
-    DDR_ras_n         : INOUT STD_LOGIC;
-    DDR_reset_n       : INOUT STD_LOGIC;
-    DDR_we_n          : INOUT STD_LOGIC;
-    FIXED_IO_ddr_vrn  : INOUT STD_LOGIC;
-    FIXED_IO_ddr_vrp  : INOUT STD_LOGIC;
-    FIXED_IO_mio      : INOUT STD_LOGIC_VECTOR (53 DOWNTO 0);
-    FIXED_IO_ps_clk   : INOUT STD_LOGIC;
-    FIXED_IO_ps_porb  : INOUT STD_LOGIC;
-    FIXED_IO_ps_srstb : INOUT STD_LOGIC;
+    --Clock Source
+    GCLK                                    : IN  STD_LOGIC;  -- 100 MHz clock
     --LED Outputs    
-    LD0, LD1, LD2, LD3, LD4, LD5, LD6, LD7 : OUT STD_LOGIC;
+    LD0, LD1, LD2, LD3, LD4, LD5, LD6, LD7  : OUT STD_LOGIC;
     --Buttons 
-    BTNC, BTND, BTNL, BTNR, BTNU : IN  STD_LOGIC;  
+    BTNC, BTND, BTNL, BTNR, BTNU            : IN  STD_LOGIC;
     --Temporary Data Ouput (JA10-JA7, JA4-JA1) 
-    JA10,JA9,JA8,JA7,JA4,JA3,JA2,JA1 : OUT STD_LOGIC
+    JA10, JA9, JA8, JA7, JA4, JA3, JA2, JA1 : OUT STD_LOGIC;
+    --UART SIGNALS
+    JB4                                     : IN  STD_LOGIC := 'H';  --RX
+    JB1                                     : OUT STD_LOGIC   --TX
+
+    --Fixed Zync Signals
+    --DDR_addr          : INOUT STD_LOGIC_VECTOR (14 DOWNTO 0);
+    --DDR_ba            : INOUT STD_LOGIC_VECTOR (2 DOWNTO 0);
+    --DDR_cas_n         : INOUT STD_LOGIC;
+    --DDR_ck_n          : INOUT STD_LOGIC;
+    --DDR_ck_p          : INOUT STD_LOGIC;
+    --DDR_cke           : INOUT STD_LOGIC;
+    --DDR_cs_n          : INOUT STD_LOGIC;
+    --DDR_dm            : INOUT STD_LOGIC_VECTOR (3 DOWNTO 0);
+    --DDR_dq            : INOUT STD_LOGIC_VECTOR (31 DOWNTO 0);
+    --DDR_dqs_n         : INOUT STD_LOGIC_VECTOR (3 DOWNTO 0);
+    --DDR_dqs_p         : INOUT STD_LOGIC_VECTOR (3 DOWNTO 0);
+    --DDR_odt           : INOUT STD_LOGIC;
+    --DDR_ras_n         : INOUT STD_LOGIC;
+    --DDR_reset_n       : INOUT STD_LOGIC;
+    --DDR_we_n          : INOUT STD_LOGIC;
+    --FIXED_IO_ddr_vrn  : INOUT STD_LOGIC;
+    --FIXED_IO_ddr_vrp  : INOUT STD_LOGIC;
+    --FIXED_IO_mio      : INOUT STD_LOGIC_VECTOR (53 DOWNTO 0);
+    --FIXED_IO_ps_clk   : INOUT STD_LOGIC;
+    --FIXED_IO_ps_porb  : INOUT STD_LOGIC;
+    --FIXED_IO_ps_srstb : INOUT STD_LOGIC;
     );
 
 END ENTITY zybo_top;
@@ -74,48 +79,6 @@ ARCHITECTURE top OF zybo_top IS
   -----------------------------------------------------------------------------
   -- Components
   -----------------------------------------------------------------------------
-
-  -----------------------------------------------------------------------------
-  -- Signals
-  -----------------------------------------------------------------------------
-  alias CLK : std_logic is GCLK;
-  SIGNAL reset, reset_clk_gen : STD_LOGIC := '1';  -- reset (async high, sync low)
-  SIGNAL run_clk              : STD_LOGIC := '0';  -- clock output of the clocking wizard
-  SIGNAL clk_locked           : STD_LOGIC := '0';  -- indicator if the clocking wizard has locked
-  -----------------------------------------------------------------------------
-  -- Aliases
-  -----------------------------------------------------------------------------
-  ALIAS reset_btn             : STD_LOGIC IS BTND;
-
-
-  CONSTANT DATA_WIDTH : POSITIVE := 8;
-
-  SIGNAL din             : STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
-  SIGNAL armed           : STD_LOGIC;
-  SIGNAL triggered       : STD_LOGIC;
-  SIGNAL rst_cmd         : STD_LOGIC                       := '0';
-  SIGNAL arm_cmd         : STD_LOGIC;
-  SIGNAL sample_enable   : STD_LOGIC                       := '1';
-  SIGNAL sample_cnt_rst  : STD_LOGIC;
-  SIGNAL delay_cnt_4x    : STD_LOGIC_VECTOR(16-1 DOWNTO 0) := (OTHERS => '0');
-  SIGNAL read_cnt_4x     : STD_LOGIC_VECTOR(16-1 DOWNTO 0) := STD_LOGIC_VECTOR(to_unsigned(1000, 16));
-  SIGNAL par_trig_msk    : STD_LOGIC_VECTOR(32-1 DOWNTO 0) := X"00_00_00_03";
-  SIGNAL par_trig_val    : STD_LOGIC_VECTOR(32-1 DOWNTO 0) := (OTHERS => '1');
-  SIGNAL capture_rdy     : STD_LOGIC;
-  SIGNAL in_fifo_tdata   : STD_LOGIC_VECTOR(31 DOWNTO 0);
-  SIGNAL in_fifo_tvalid  : STD_LOGIC;
-  SIGNAL in_fifo_tlast   : STD_LOGIC;
-  SIGNAL in_fifo_tready  : STD_LOGIC;
-  SIGNAL in_fifo_tfull   : STD_LOGIC;
-  SIGNAL in_fifo_tempty  : STD_LOGIC;
-  SIGNAL in_fifo_tflush  : STD_LOGIC;
-  --
-  SIGNAL out_fifo_tdata  : STD_LOGIC_VECTOR(7 DOWNTO 0);
-  SIGNAL out_fifo_tvalid : STD_LOGIC;
-  SIGNAL out_fifo_tlast  : STD_LOGIC;
-  SIGNAL out_fifo_tready : STD_LOGIC;
-  
-  
   COMPONENT Zynq_BD_wrapper IS
     PORT (
       DDR_addr          : INOUT STD_LOGIC_VECTOR (14 DOWNTO 0);
@@ -144,22 +107,69 @@ ARCHITECTURE top OF zybo_top IS
       );
   END COMPONENT;
 
+  -----------------------------------------------------------------------------
+  -- Signals
+  -----------------------------------------------------------------------------
+  SIGNAL   reset, reset_clk_gen : STD_LOGIC                       := '1';  -- reset (async high, sync low)
+  SIGNAL   run_clk              : STD_LOGIC                       := '0';  -- clock output of the clocking wizard
+  SIGNAL   clk_locked           : STD_LOGIC                       := '0';  -- indicator if the clocking wizard has locked
+  SIGNAL   din                  : STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0);
+  SIGNAL   armed                : STD_LOGIC;
+  SIGNAL   triggered            : STD_LOGIC;
+  SIGNAL   rst_cmd              : STD_LOGIC                       := '0';
+  SIGNAL   arm_cmd              : STD_LOGIC;
+  SIGNAL   sample_enable        : STD_LOGIC                       := '1';
+  SIGNAL   sample_cnt_rst       : STD_LOGIC;
+  SIGNAL   delay_cnt_4x         : STD_LOGIC_VECTOR(16-1 DOWNTO 0) := (OTHERS => '0');
+  SIGNAL   read_cnt_4x          : STD_LOGIC_VECTOR(16-1 DOWNTO 0) := STD_LOGIC_VECTOR(to_unsigned(1000, 16));
+  SIGNAL   par_trig_msk         : STD_LOGIC_VECTOR(32-1 DOWNTO 0) := X"00_00_00_03";
+  SIGNAL   par_trig_val         : STD_LOGIC_VECTOR(32-1 DOWNTO 0) := (OTHERS => '1');
+  SIGNAL   capture_rdy          : STD_LOGIC;
+  SIGNAL   in_fifo_tdata        : STD_LOGIC_VECTOR(31 DOWNTO 0);
+  SIGNAL   in_fifo_tvalid       : STD_LOGIC;
+  SIGNAL   in_fifo_tlast        : STD_LOGIC;
+  SIGNAL   in_fifo_tready       : STD_LOGIC;
+  SIGNAL   in_fifo_tfull        : STD_LOGIC;
+  SIGNAL   in_fifo_tempty       : STD_LOGIC;
+  SIGNAL   in_fifo_tflush       : STD_LOGIC;
+  --
+  SIGNAL   out_fifo_tdata       : STD_LOGIC_VECTOR(7 DOWNTO 0);
+  SIGNAL   out_fifo_tvalid      : STD_LOGIC;
+  SIGNAL   out_fifo_tlast       : STD_LOGIC;
+  SIGNAL   out_fifo_tready      : STD_LOGIC;
+  -----------------------------------------------------------------------------
+  -- Aliases
+  -----------------------------------------------------------------------------
+  ALIAS reset_btn               : STD_LOGIC IS BTND;
+  ALIAS CLK                     : STD_LOGIC IS GCLK;
+  ALIAS UART_RX                 : STD_LOGIC IS JB4;
+  ALIAS UART_TX                 : STD_LOGIC IS JB1;
+  -----------------------------------------------------------------------------
+  -- Constants
+  -----------------------------------------------------------------------------
+  CONSTANT DATA_WIDTH           : POSITIVE                        := 8;
 
-  SIGNAL uart_txd, uart_rxd : STD_LOGIC := '0';
+  
+
+
 
 BEGIN  -- ARCHITECTURE top
 
-  JA10<=out_fifo_tdata(7);
-  JA9<=out_fifo_tdata(6);
-  JA8<=out_fifo_tdata(5);
-  JA7<=out_fifo_tdata(4);
-  JA4<=out_fifo_tdata(3);
-  JA3<=out_fifo_tdata(2);
-  JA2<=out_fifo_tdata(1);
-  JA1<=out_fifo_tdata(0);
   
+  JA10 <= out_fifo_tdata(7);
+  JA9  <= out_fifo_tdata(6);
+  JA8  <= out_fifo_tdata(5);
+  JA7  <= out_fifo_tdata(4);
+  JA4  <= out_fifo_tdata(3);
+  JA3  <= out_fifo_tdata(2);
+  JA2  <= out_fifo_tdata(1);
+  JA1  <= out_fifo_tdata(0);
+
+  --LED to indicate that the clock is locked
   LD1 <= clk_locked;
-  capture_ctrl_1 : ENTITY work.capture_ctrl
+
+
+ : ENTITY work.capture_ctrl
     GENERIC MAP (
       DATA_WIDTH => DATA_WIDTH)
     PORT MAP (
@@ -263,30 +273,30 @@ BEGIN  -- ARCHITECTURE top
     END IF;
   END PROCESS reset_proc;
 
-zynq : ENTITY work.Zynq_BD_wrapper
-  PORT MAP (
-    DDR_addr          => DDR_addr,
-    DDR_ba            => DDR_ba,
-    DDR_cas_n         => DDR_cas_n,
-    DDR_ck_n          => DDR_ck_n,
-    DDR_ck_p          => DDR_ck_p,
-    DDR_cke           => DDR_cke,
-    DDR_cs_n          => DDR_cs_n,
-    DDR_dm            => DDR_dm,
-    DDR_dq            => DDR_dq,
-    DDR_dqs_n         => DDR_dqs_n,
-    DDR_dqs_p         => DDR_dqs_p,
-    DDR_odt           => DDR_odt,
-    DDR_ras_n         => DDR_ras_n,
-    DDR_reset_n       => DDR_reset_n,
-    DDR_we_n          => DDR_we_n,
-    FIXED_IO_ddr_vrn  => FIXED_IO_ddr_vrn,
-    FIXED_IO_ddr_vrp  => FIXED_IO_ddr_vrp,
-    FIXED_IO_mio      => FIXED_IO_mio,
-    FIXED_IO_ps_clk   => FIXED_IO_ps_clk,
-    FIXED_IO_ps_porb  => FIXED_IO_ps_porb,
-    FIXED_IO_ps_srstb => FIXED_IO_ps_srstb,
-    UART_rxd          => UART_rxd,
-    UART_txd          => UART_txd);
+--zynq : ENTITY work.Zynq_BD_wrapper
+--  PORT MAP (
+--    DDR_addr          => DDR_addr,
+--    DDR_ba            => DDR_ba,
+--    DDR_cas_n         => DDR_cas_n,
+--    DDR_ck_n          => DDR_ck_n,
+--    DDR_ck_p          => DDR_ck_p,
+--    DDR_cke           => DDR_cke,
+--    DDR_cs_n          => DDR_cs_n,
+--    DDR_dm            => DDR_dm,
+--    DDR_dq            => DDR_dq,
+--    DDR_dqs_n         => DDR_dqs_n,
+--    DDR_dqs_p         => DDR_dqs_p,
+--    DDR_odt           => DDR_odt,
+--    DDR_ras_n         => DDR_ras_n,
+--    DDR_reset_n       => DDR_reset_n,
+--    DDR_we_n          => DDR_we_n,
+--    FIXED_IO_ddr_vrn  => FIXED_IO_ddr_vrn,
+--    FIXED_IO_ddr_vrp  => FIXED_IO_ddr_vrp,
+--    FIXED_IO_mio      => FIXED_IO_mio,
+--    FIXED_IO_ps_clk   => FIXED_IO_ps_clk,
+--    FIXED_IO_ps_porb  => FIXED_IO_ps_porb,
+--    FIXED_IO_ps_srstb => FIXED_IO_ps_srstb,
+--    UART_rxd          => UART_rxd,
+--    UART_txd          => UART_txd);
 
-END ARCHITECTURE top;
+  END ARCHITECTURE top;
