@@ -49,7 +49,7 @@ entity SUMPComms is
        data_ready : in  std_logic;      -- flag for transmit message
        data_sent  : out std_logic;      -- flag for transmit message
 
-       command : out std_logic_vector(7 downto 0));  -- commands for message handler
+       command : out std_logic_vector(7 downto 0);  -- commands for message handler
   command_data : out std_logic_vector(31 downto 0));  -- commands for message handler
 
 end entity SUMPComms;
@@ -65,15 +65,17 @@ architecture comms of SUMPComms is
   constant clock_freq : integer := 10000000;  -- 10MHz
 
 begin
-  uart : entity work.uart_comms port map(clk           => clk;
-                                         rst           => rst;
-                                         stream_tx_stb => stream_in_done;
-                                         stream_rx_ack => stream_out_ready;
-                                         rx            => rx;
-                                         data_in       => tx_data;
-                                         stream_rx_stb => stream_read_done;
-                                         stream_tx_ack => stream_trans_ready;
-                                         tx            => tx_line;p
+  uart : entity work.uart_comms generic map(baud_rate => baud_rate,
+					    clock_freq => clock_freq)
+				port map(clk           => clk,
+                                         rst           => rst,
+                                         --stream_tx_stb => stream_in_done,
+                                         stream_rx_ack => stream_out_ready,
+                                         rx            => rx,
+                                         data_in       => tx_data,
+                                         stream_rx_stb => stream_read_done,
+                                         stream_tx_ack => stream_trans_ready,
+                                         tx            => tx_line,
                                          data_out      => rx_data);
 
   transmit : process (clk)

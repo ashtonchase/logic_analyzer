@@ -160,7 +160,8 @@ begin
 
 
 
-  -- State transition logic for TX  tx_moore : process (baud_clock)
+  -- State transition logic for TX  
+  tx_moore : process (baud_clock)
   begin
     if baud_clock = '1' and baud_clock'event then
       tx <= '1';
