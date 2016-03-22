@@ -51,7 +51,9 @@ entity uart_comms is
        tx_data_ready    : in  std_logic;  -- stream out stop bit sent
        tx_data_sent     : out std_logic;  -- ready for rx
        tx               : out std_logic                    := '1';  -- transmit line
-       data_out         : out std_logic_vector(7 downto 0) := (others => '0'));  -- data recieved from rx line
+       data_out         : out std_logic_vector(7 downto 0) := (others => '0');
+	state : out integer;
+	baud16 : out std_logic);  -- data recieved from rx line
 
 begin  --added comment
 
@@ -69,17 +71,17 @@ architecture pass_through of uart_comms is
 
 
   signal baud_clock, baud_clock_x16     : std_logic              := '0';
-  signal baud_counter, baud_counter_x16 : integer range 0 to 255 := 0;
-  signal sampling_counter, zero_counter : integer range 0 to 255 := 0;
+  signal baud_counter, baud_counter_x16 : integer range 0 to 1024 := 0;
+  signal sampling_counter, zero_counter : integer range 0 to 16 := 0;
   signal baud_reset                     : std_logic              := '0';
-  constant baud_total                   : integer                := clock_freq/baud_rate;
+  constant baud_total                   : integer                := (clock_freq/baud_rate)/2;
 begin
 
   -- Create baud clock
   baud_clocking : process (clk)
   begin
     if(clk = '1') then
-      if (baud_counter < baud_total) then
+      if (baud_counter < baud_total - 1) then
         baud_counter <= baud_counter + 1;
       else
         baud_counter <= 0;
@@ -90,12 +92,12 @@ begin
 
   baud_clocking_x16 : process (clk)
   begin
-    if (clk = '1') then
+    if (clk = '1' and clk'event) then
       if(baud_reset = '1') then
         baud_counter_x16 <= 0;
         baud_clock_x16   <= '0';
         baud_reset       <= '0';
-      elsif (baud_counter_x16 < baud_total/16) then
+      elsif (baud_counter_x16 < ((baud_total/16) - 1)) then
         baud_counter_x16 <= baud_counter_x16 + 1;
       else
         baud_counter_x16 <= 0;
@@ -103,6 +105,7 @@ begin
       end if;
     end if;
   end process baud_clocking_x16;
+  baud16 <= baud_clock_x16;
 
   -- State transition logic for RX
   rx_moore : process (baud_clock_x16)
@@ -112,11 +115,14 @@ begin
 
       case rx_current_state is
         when Init =>
+	--  state <= 0;
           rx_next_state <= Wait_State;
 
         when Wait_State =>
           rx_next_state <= Wait_State;
+	--  state <= 1;
 
+	state <= zero_counter;
           if zero_counter < 9 then
             if rx = '0' then
               zero_counter <= zero_counter + 1;
@@ -132,6 +138,8 @@ begin
 
         when Get_Data =>
           rx_next_state <= Get_Data;
+         -- state <= 2;
+
           if sampling_counter < 15 then
             sampling_counter <= sampling_counter + 1;
           else
@@ -147,6 +155,8 @@ begin
 
         when Data_Ready =>
           rx_next_state       <= Data_Ready;
+	--state <= 3;
+		
           rx_data_ready       <= '1';
           if rx_get_more_data <= '1' then
             rx_next_state <= Wait_State;
