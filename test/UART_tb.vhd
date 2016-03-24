@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : UART_tb.vhd
 -- Created    : 2016-02-22
--- Last update: 2016-03-15
+-- Last update: 2016-03-22
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: This is the UART testbench
@@ -18,7 +18,7 @@
 
 -- This program is distributed in the hope that it will be useful,
 -- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 -- GNU General Public License for more details.
 
 -- You should have received a copy of the GNU General Public License along
@@ -27,7 +27,7 @@
 -------------------------------------------------------------------------------
 -- Revisions  :
 -- Date        Version      Author      Description
--- 2016-03-16      1.0      ian	   			Created
+-- 2016-03-16      1.0      ian                         Created
 -------------------------------------------------------------------------------
 
 use WORK.all;
@@ -41,75 +41,91 @@ library ieee;
 use IEEE.std_logic_1164.all;
 
 architecture test of UART_tb is
-signal data_in, data_out : STD_LOGIC_VECTOR(7 DOWNTO 0) => (others <= '0');
-signal stream_in_stb, stream_out_ack, rx, rst, tx, stream_out_stb, stream_in_ack : std_logic;
-signal clk, baud_clock : std_logic := '1';
-signal baud_counter : integer := 0;
-constant baud_rate : INTEGER := 10_000
-constant clock_freq : INTEGER := 10_000_000
-constant baud_total : INTEGER := clock_freq/baud_rate;
-begin
-	u1 : entity work.uart_comms
-	generic map (clock_freq => clock_freq, baud_rate => baud_rate)
-	port map ( clk => clk,
-			rst => rst,
-			stream_in_stb => stream_in_stb,
-			stream_out_stb => stream_out_stb,
-			rx => rx,
-			data_in => data_in,
-			stream_in_ack => stream_in_ack,
-			stream_out_ack => stream_out_ack,
-			tx => tx,
-			data_out => data_out );
+  
+  signal clk              : std_logic := '1';  -- clock
+  signal rst              : std_logic;  -- reset logic
+  signal rx_get_more_data : std_logic;  -- stop bit found for stream in
+  signal rx_data_ready    : std_logic;  -- stream out ready
+  signal rx               : std_logic;  -- recieve line
+  signal data_in          : std_logic_vector(7 downto 0) := (others => '0');  -- data to be transmitted
+  signal tx_data_ready    : std_logic;  -- stream out stop bit sent
+  signal tx_data_sent     : std_logic;  -- ready for rx
+  signal tx               : std_logic                    := '1';  -- transmit line
+  signal data_out         : std_logic_vector(7 downto 0) := (others => '0');
 
-	process (clk)
-	begin
-		clk <= not clk after 50 ns; -- 10 MHz clock
-	end process;
-	
-	baud_clocking : PROCESS (clk)
-	begin
-		if(clk = '1' and clk'event) then
-			if (baud_counter < baud_total) then
-				baud_counter <= baud_counter + 1;
-			else
-				baud_counter <= 0;
-				baud_clock <= not baud_clock;
-			end if;
-		end if;
-	end process baud_clocking;
-	
-	process
-	begin
-	rx <= '1'; -- nothing
-	wait for 200 ms;
-	rx <= '0'; -- stb
-	wait for 100 ns;
-	rx <= '1'; -- 1
-	wait for 100 ns;
-	rx <= '0'; -- 2
-	wait for 100 ns;
-	rx <= '0'; -- 3
-	wait for 100 ns;
-	rx <= '1'; -- 4
-	wait for 100 ns;
-	rx <= '1'; -- 5
-	wait for 100 ns;
-	rx <= '1'; -- 6
-	wait for 100 ns
-	rx <= '0'; -- 7
-	wait for 100 ns
-	rx <= '0'; -- 8
-	wait for 100 ns
-	rx <= '1'; -- end
-	end process;
-	
-	process
-	begin
-	wait for 1000 ms;
-	data_in <= "10100111";
-	end process;
-	
+  signal   baud_clock   : std_logic := '1';
+  signal   baud_counter : integer   := 0;
+  constant baud_rate    : integer   := 10_000;
+  constant clock_freq   : integer   := 10_000_000;
+  constant baud_total   : integer   := (clock_freq/baud_rate)/2;
+begin
+  u1 : entity work.uart_comms
+    generic map (clock_freq => clock_freq, baud_rate => baud_rate)
+    port map (
+      clk              => clk,
+      rst              => rst,
+      rx_get_more_data => rx_get_more_data,
+      rx_data_ready    => rx_data_ready,
+      rx               => rx,
+      data_in          => data_in,
+      tx_data_ready    => tx_data_ready,
+      tx_data_sent     => tx_data_sent,
+      tx               => tx,
+      data_out         => data_out);
+
+  process (clk)
+  begin
+    clk <= not clk after 50 ns;         -- 10 MHz clock
+  end process;
+
+  baud_clocking : process (clk)
+  begin
+    if(clk = '1' and clk'event) then
+      if (baud_counter < baud_total-1) then
+        baud_counter <= baud_counter + 1;
+      else
+        baud_counter <= 0;
+        baud_clock   <= not baud_clock;
+      end if;
+    end if;
+  end process baud_clocking;
+
+  process
+  begin
+    rx <= '1';
+    rst <= '0';
+    wait for 10 ns;
+    rx_get_more_data <= '1';
+    wait until rising_edge(baud_clock);
+    rx <= '1';                          -- nothing
+    wait until rising_edge(baud_clock);
+    rx <= '0';                          -- stb
+    wait until rising_edge(baud_clock);
+    rx <= '1';                          -- 1
+    wait until rising_edge(baud_clock);
+    rx <= '0';                          -- 2
+    wait until rising_edge(baud_clock);
+    rx <= '0';                          -- 3
+    wait until rising_edge(baud_clock);
+    rx <= '1';                          -- 4
+    wait until rising_edge(baud_clock);
+    rx <= '1';                          -- 5
+    wait until rising_edge(baud_clock);
+    rx <= '1';                          -- 6
+    wait until rising_edge(baud_clock);
+      rx <= '0';                        -- 7
+    wait until rising_edge(baud_clock);
+      rx <= '0';                        -- 8
+    wait until rising_edge(baud_clock);
+      rx <= '1';                        -- end
+  end process;
+
+  process
+  begin
+    wait for 1000 ms;
+    data_in <= "10100111";
+  end process;
+  
 end test;
 
 
