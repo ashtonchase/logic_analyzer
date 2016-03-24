@@ -52,8 +52,6 @@ architecture test of UART_tb is
   signal tx_data_sent     : std_logic;  -- ready for rx
   signal tx               : std_logic                    := '1';  -- transmit line
   signal data_out         : std_logic_vector(7 downto 0) := (others => '0');
-  signal state 	: integer;
-  signal baud16 : std_logic;
 
   signal   baud_clock   : std_logic := '1';
   signal   baud_counter : integer   := 0;
@@ -73,9 +71,7 @@ begin
       tx_data_ready    => tx_data_ready,
       tx_data_sent     => tx_data_sent,
       tx               => tx,
-      data_out         => data_out,
-	state => state,
-	baud16 => baud16);
+      data_out         => data_out);
 
   process (clk)
   begin
