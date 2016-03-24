@@ -106,7 +106,10 @@ ARCHITECTURE top OF zybo_top IS
       UART_txd          : OUT   STD_LOGIC
       );
   END COMPONENT;
-
+  -----------------------------------------------------------------------------
+  -- Constants
+  -----------------------------------------------------------------------------
+  CONSTANT DATA_WIDTH           : POSITIVE                        := 32;
   -----------------------------------------------------------------------------
   -- Signals
   -----------------------------------------------------------------------------
@@ -144,10 +147,7 @@ ARCHITECTURE top OF zybo_top IS
   ALIAS CLK                     : STD_LOGIC IS GCLK;
   ALIAS UART_RX                 : STD_LOGIC IS JB4;
   ALIAS UART_TX                 : STD_LOGIC IS JB1;
-  -----------------------------------------------------------------------------
-  -- Constants
-  -----------------------------------------------------------------------------
-  CONSTANT DATA_WIDTH           : POSITIVE                        := 8;
+
 
   
 
@@ -169,13 +169,13 @@ BEGIN  -- ARCHITECTURE top
   LD1 <= clk_locked;
 
 
- : ENTITY work.capture_ctrl
+ capture_control_block : ENTITY work.capture_ctrl
     GENERIC MAP (
       DATA_WIDTH => DATA_WIDTH)
     PORT MAP (
       clk            => run_clk,
       rst            => reset,
-      din            => "00000" & btnl & btnc & btnr,
+      din            => X"00_00_00" & "00000" & btnl & btnc & btnr,
       armed          => ld3,
       triggered      => ld2,
       rst_cmd        => btnd,
@@ -199,7 +199,7 @@ BEGIN  -- ARCHITECTURE top
 
   sample_storage_block : ENTITY work.storage
     GENERIC MAP (
-      FIFO_SIZE => 2**4)
+      FIFO_SIZE => 2**18)
     PORT MAP (
       clk             => run_clk,
       reset           => reset,
