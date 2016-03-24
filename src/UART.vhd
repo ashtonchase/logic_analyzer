@@ -39,8 +39,8 @@ use ieee.numeric_std.all;
 use ieee.math_real.all;
 
 entity uart_comms is
-  generic (baud_rate  : positive;
-           clock_freq : positive);  -- Make sure we keep integer division here
+  generic (baud_rate  : positive := 115_200;
+           clock_freq : positive := 100_000_000);  -- Make sure we keep integer division here
 
   port(clk              : in  std_logic;  -- clock
        rst              : in  std_logic;  -- reset logic
@@ -73,9 +73,9 @@ architecture pass_through of uart_comms is
   signal baud_clock, baud_clock_x16     : std_logic              := '0';
   signal baud_counter, baud_counter_x16 : integer range 0 to 1024 := 0;
   signal sampling_counter, zero_counter : integer range 0 to 16 := 0;
-  signal baud_reset                     : std_logic              := '0';
-  constant baud_total                   : integer                := (clock_freq/baud_rate);
-  constant baud_total_x16               : integer                := (clock_freq/baud_rate)/16;
+  signal baud_reset,baud_reset_last                     : std_logic              := '0';
+  constant baud_total                   : integer                := (clock_freq/baud_rate)/2;
+  constant baud_total_x16               : integer                := (clock_freq/baud_rate)/16/2;
 begin
 
   -- Create baud clock
@@ -94,10 +94,10 @@ begin
   baud_clocking_x16 : process (clk)
   begin
     if (clk = '1' and clk'event) then
-      if(baud_reset = '1') then
+      baud_reset_last<=baud_reset;
+      if(baud_reset = '1' and baud_reset_last='0') then
         baud_counter_x16 <= 0;
-        baud_clock_x16   <= '0';
-        baud_reset       <= '0';
+        baud_clock_x16   <= '0';   
       elsif (baud_counter_x16 < ((baud_total_x16) - 1)) then
         baud_counter_x16 <= baud_counter_x16 + 1;
       else
@@ -112,6 +112,7 @@ begin
   rx_moore : process (baud_clock_x16)
   begin
     if baud_clock_x16 = '1' and baud_clock_x16'event then
+     baud_reset       <= '0';
       rx_data_ready <= '0';
 
       case rx_current_state is
@@ -124,17 +125,18 @@ begin
 	--  state <= 1;
 
 	--state <= zero_counter;
-          if zero_counter < 9 then
-            if rx = '0' then
-              zero_counter <= zero_counter + 1;
-            else
-              zero_counter <= 0;
-            end if;
-          else
+	      if rx = '0' then
+            zero_counter <= zero_counter + 1;
+          else    
+            zero_counter <= 0;
+          end if;
+          if zero_counter > 9 then
+        
             rx_next_state    <= Get_Data;
             baud_reset       <= '1';
             sampling_counter <= 0;
             rx_counter       <= 0;
+            zero_counter <= 0;
           end if;
 
         when Get_Data =>

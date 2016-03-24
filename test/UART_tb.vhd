@@ -95,7 +95,8 @@ begin
     rx <= '1';
     rst <= '0';
     wait for 10 ns;
-    rx_get_more_data <= '1';
+    wait until rising_edge(baud_clock);
+    rx_get_more_data <= '0';
     wait until rising_edge(baud_clock);
     rx <= '1';                          -- nothing
     wait until rising_edge(baud_clock);
@@ -118,6 +119,10 @@ begin
       rx <= '0';                        -- 8
     wait until rising_edge(baud_clock);
       rx <= '1';                        -- end
+    assert data_out="00111001" report "data out does not match UART data in" severity failure;
+    wait for 100 us;
+    wait until rising_edge(baud_clock);
+    rx_get_more_data <= '1';
   end process;
 
   process
