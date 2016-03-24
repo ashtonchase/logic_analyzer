@@ -186,7 +186,7 @@ begin  -- ARCHITECTURE structural
       read_cnt_4x       => read_cnt_4x,
       par_trig_msk      => par_trig_msk,
       par_trig_val      => par_trig_val,
-      capture_rdy       => capture_rdy,
+      capture_rdy       => capture_rdy
       )
 
 end architecture structural;
