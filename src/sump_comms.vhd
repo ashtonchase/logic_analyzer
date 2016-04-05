@@ -45,7 +45,7 @@ entity SUMPComms is
        tx            : out std_logic;
        tx_command    : in  std_logic_vector(31 downto 0);  -- data from storage
        --  ready_for_command : in  std_logic;  -- flag for data message collect
-       command_ready : out std_logic_vector (1 downto 0);  -- flags for data message collect
+       command_ready : out std_logic;  -- flags for data message collect
 
        data_ready : in  std_logic;      -- flag for transmit message
        data_sent  : out std_logic;      -- flag for transmit message
@@ -100,7 +100,6 @@ begin
       state_selector : case rx_curr_state is
         when Init =>
           rx_next_state <= Wait_State;
-          data_count    <= 0;
           command_ready <= '0';
 
         when Wait_State =>
@@ -126,6 +125,43 @@ begin
       end case state_selector;
     end if clock_entry;
   end process command_reciever;
+
+
+  --command_sender : process (clk)
+  --begin
+  --  clock_entry : if rst = '1' then
+  --    rx_next_state <= Init;
+
+  --  elsif (clk = '1' and clk'event) then
+  --    data_sent <= '0';
+  --    state_selector : case rx_curr_state is
+  --      when Init =>
+  --        rx_next_state <= Wait_State;
+  --        command_ready <= '0';
+
+  --      when Wait_State =>
+  --        rx_next_state <= Wait_State;
+
+  --        if rx_data_ready = '1' then
+  --          rx_next_state <= Command_Received;
+  --          comm_signal   <= data_out;
+  --          command <= comm_signal;
+  --          command_ready = '1';
+  --        end if;
+
+  --      when Command_Recieved =>
+  --        rx_next_state <= Command_Received;
+
+  --        if rx_data_ready = '0' then
+  --          rx_next_state <= Wait_State;
+  --        end if;
+
+  --      when others =>
+  --        rx_next_state <= Init;
+
+  --    end case state_selector;
+  --  end if clock_entry;
+  --end process command_sender;
 
 
 
