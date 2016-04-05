@@ -59,14 +59,12 @@ entity msg_processer is
 		delay_cnt : out std_logic(15 downto 0);  -- Number of samples (divided by 4) to capture after trigger
 		trig_msk  : out std_logic(31 downto 0);  -- Define which trigger values must match
 		trig_vals : out std_logic(31 downto 0);  -- Set the trigger's individual bit values
-		
 	);  -- port
-
 end entity msg_processor;
 
 architecture behave of msg_processor is
-	signal cmd_in  : STD_LOGIC_VECTOR(7 downto 0) := (others => '0');
-	signal data_in : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+	signal cmd_in  : std_logic_vector(7 downto 0) := (others => '0');
+	signal data_in : std_logic_vector(31 downto 0) := (others => '0');
 
 	type state_t is (INIT, READ_CMD, DO_CMD, BYTE1, BYTE2, BYTE3, BYTE4);
 	signal state : state_t;
