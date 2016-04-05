@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : UART_tb.vhd
 -- Created    : 2016-02-22
--- Last update: 2016-03-28
+-- Last update: 2016-03-22
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: This is the UART testbench
@@ -46,14 +46,12 @@ architecture test of UART_tb is
   signal rst              : std_logic;  -- reset logic
   signal rx_get_more_data : std_logic;  -- stop bit found for stream in
   signal rx_data_ready    : std_logic;  -- stream out ready
-  signal rx               : std_logic;  -- receive line
+  signal rx               : std_logic;  -- recieve line
   signal data_in          : std_logic_vector(7 downto 0) := (others => '0');  -- data to be transmitted
   signal tx_data_ready    : std_logic;  -- stream out stop bit sent
   signal tx_data_sent     : std_logic;  -- ready for rx
   signal tx               : std_logic                    := '1';  -- transmit line
   signal data_out         : std_logic_vector(7 downto 0) := (others => '0');
-
-  signal receive_data : std_logic_vector(7 downto 0);
 
   signal   baud_clock   : std_logic := '1';
   signal   baud_counter : integer   := 0;
@@ -97,7 +95,6 @@ begin
     rx <= '1';
     rst <= '0';
     wait for 10 ns;
-    receive_data <= "10011100";
     wait until rising_edge(baud_clock);
     rx_get_more_data <= '0';
     wait until rising_edge(baud_clock);
@@ -105,24 +102,24 @@ begin
     wait until rising_edge(baud_clock);
     rx <= '0';                          -- stb
     wait until rising_edge(baud_clock);
-    rx <= receive_data(0);             
+    rx <= '1';                          -- 1
     wait until rising_edge(baud_clock);
-    rx <= receive_data(1); 
+    rx <= '0';                          -- 2
     wait until rising_edge(baud_clock);
-    rx <= receive_data(2); 
+    rx <= '0';                          -- 3
     wait until rising_edge(baud_clock);
-    rx <= receive_data(3); 
+    rx <= '1';                          -- 4
     wait until rising_edge(baud_clock);
-    rx <= receive_data(4); 
+    rx <= '1';                          -- 5
     wait until rising_edge(baud_clock);
-    rx <= receive_data(5); 
+    rx <= '1';                          -- 6
     wait until rising_edge(baud_clock);
-    rx <= receive_data(6); 
+      rx <= '0';                        -- 7
     wait until rising_edge(baud_clock);
-    rx <= receive_data(7); 
+      rx <= '0';                        -- 8
     wait until rising_edge(baud_clock);
-    rx <= '1';                        -- end
-    assert data_out=receive_data report "data out does not match UART data in" severity failure;
+      rx <= '1';                        -- end
+    assert data_out="00111001" report "data out does not match UART data in" severity failure;
     wait for 100 us;
     wait until rising_edge(baud_clock);
     rx_get_more_data <= '1';
@@ -130,14 +127,8 @@ begin
 
   process
   begin
-    tx_data_ready <= '0';
-    wait until rising_edge(baud_clock);
-    wait until rising_edge(baud_clock);
-    wait until rising_edge(baud_clock);
-    wait until rising_edge(baud_clock);
-    data_in       <= "10100111";
-    tx_data_ready <= '1';
-    wait for 100 ms;
+    wait for 1000 ms;
+    data_in <= "10100111";
   end process;
   
 end test;

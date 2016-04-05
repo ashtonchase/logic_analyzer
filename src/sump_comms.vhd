@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : SUMPComms.vhd
 -- Created    : 2016-02-22
--- Last update: 2016-03-28
+-- Last update: 2016-03-22
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: This is the top module for comms between the SUMP module and
@@ -42,120 +42,73 @@ entity SUMPComms is
   port(clk               : in  std_logic;  -- clock
        rst               : in  std_logic;  -- reset
        rx                : in  std_logic;  -- data line from top level
-       tx                : out std_logic;
        tx_command        : in  std_logic_vector(31 downto 0);  -- data from storage
        ready_for_command : in  std_logic;  -- flag for data message collect
-       command_ready     : out std_logic_vector (1 downto 0);  -- flags for data message collect
+       command_ready     : out std_logic;  -- flag for data message collect
 
        data_ready : in  std_logic;      -- flag for transmit message
        data_sent  : out std_logic;      -- flag for transmit message
 
-       command      : out std_logic_vector(7 downto 0);  -- commands for message handler
-       command_data : out std_logic_vector(31 downto 0));  -- commands for message handler
+       command : out std_logic_vector(7 downto 0);  -- commands for message handler
+  command_data : out std_logic_vector(31 downto 0));  -- commands for message handler
 
 end entity SUMPComms;
 
 architecture comms of SUMPComms is
-  type states is (Init, Wait_State, Drop_Wait, Command_Received, Wait_For_Ready,
-                  Send_Data, Send_Complete);
-  signal rx_curr_state, rx_next_state, tx_curr_state, tx_next_state : states;
 
-
-  signal rx_get_more_data : std_logic;  -- stop bit found for stream in
-  signal rx_data_ready    : std_logic;  -- stream out ready
-  signal data_out         : std_logic_vector(7 downto 0) := (others => '0');
-
-  signal tx_data_in    : std_logic_vector(7 downto 0) := (others => '0');  -- data to be transmitted
-  signal tx_data_ready : std_logic;     -- stream out stop bit sent
-  signal tx_data_sent  : std_logic;     -- ready for rx
-
-  signal data_count       : integer range 0 to 15 := 0;
-  signal comm_signal      : std_logic_vector(7 downto 0);  -- commands for message handler
-  signal comm_data_signal : std_logic_vector(31 downto 0);  -- commands for message handler
+  signal stream_in_done, stream_read_done, stream_trans_ready, stream_out_ready : std_logic;
+  signal rx_data, tx_data                                                       : std_logic_vector(7 downto 0);
+  signal tx_line                                                                : std_logic;
+  signal command_count                                                          : integer range 0 to 15 := 0;
 
   constant baud_rate  : integer := 9600;      -- sorta normal baud
   constant clock_freq : integer := 10000000;  -- 10MHz
 
 begin
-  u1 : entity work.uart_comms
-    generic map (clock_freq => clock_freq, baud_rate => baud_rate)
-    port map (
-      clk              => clk,
-      rst              => rst,
-      rx_get_more_data => rx_get_more_data,
-      rx_data_ready    => rx_data_ready,
-      rx               => rx,
-      data_in          => tx_data_in,
-      tx_data_ready    => tx_data_ready,
-      tx_data_sent     => tx_data_sent,
-      tx               => tx,
-      data_out         => data_out);
+  uart : entity work.uart_comms generic map(baud_rate => baud_rate,
+					    clock_freq => clock_freq)
+				port map(clk           => clk,
+                                         rst           => rst,
+                                         --stream_tx_stb => stream_in_done,
+                                         stream_rx_ack => stream_out_ready,
+                                         rx            => rx,
+                                         data_in       => tx_data,
+                                         stream_rx_stb => stream_read_done,
+                                         stream_tx_ack => stream_trans_ready,
+                                         tx            => tx_line,
+                                         data_out      => rx_data);
 
-
-  command_reciever : process (clk)
+  transmit : process (clk)
   begin
-    clock_entry : if rst = '1' then
-      rx_next_state <= Init;
+    if clk = '1' and data_ready = '1' and stream_in_done = '1' then
+      tx_data <= tx_command (31 downto 24);
+    end if;
 
-    elsif (clk = '1' and clk'event) then
-      rx_get_more_data <= '1';
-      state_selector : case rx_curr_state is
-        when Init =>
-          rx_next_state <= Wait_State;
-          data_count    <= 0;
-          command_ready <= "00";
+  end process transmit;
 
-        when Wait_State =>
-          rx_next_state <= Wait_State;
-          command_ready <= "00";
+  recieve : process (clk)
+  begin
+    if clk = '1' then
+      if stream_read_done = '1' and command_count < 5 then
+        if command_count = 0 and ready_for_command = '1' then
+          command <= rx_data;
+        else
+          command_data <= command_data(23 downto 0) & rx_data;
+        end if;
+        command_count <= command_count + 1;
+        command_ready <= '0';
+      end if;
+    else if command_count >= 5 then;
+                                   if ready_for_command = '0';
+                                   command_ready <= '1';
+         else
 
-          if rx_data_ready = '1' then
-            rx_next_state <= Drop_Wait;
-            comm_signal   <= data_out;
-            data_count    <= 0;
-          end if;
-
-        when Drop_Wait =>
-          rx_next_state <= Drop_Wait;
-          command       <= comm_signal;
-          command_ready <= "10";
-
-          if rx_data_ready = '0' then
-            rx_next_state <= Command_Received;
-          end if;
-
-        when Command_Received =>
-          rx_next_state <= Command_Received;
-          command_ready <= "10";
-          if rx_data_ready = '1' then
-            rx_next_state       <= Drop_Wait;
-            data_count          <= data_count + 1;
-            comm_data_signal <= data_out & comm_data_signal(31 downto 8);
-          end if;
-
-          if data_count = 4 then
-            rx_next_state <= Wait_For_Ready;
-          end if;
-
-        when Wait_For_Ready =>
-          rx_next_state    <= Wait_For_Ready;
-          rx_get_more_data <= '0';
-          command_ready    <= "11";
-          command_data     <= comm_data_signal;
-
-          if ready_for_command = '1' then
-            rx_next_state <= Wait_State;
-          end if;
-
-        when others =>
-          rx_next_state <= Init;
-
-      end case state_selector;
-    end if clock_entry;
-  end process command_reciever;
-
-
-
+         end if;
+    end if;
+  end process recieve;
+  
+  
+  
 end architecture comms;
 
 
