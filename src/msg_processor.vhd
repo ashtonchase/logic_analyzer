@@ -33,7 +33,7 @@
 -- Date        Version      Author      Description
 -- 2016-03-17    0.0        David       Created
 -- 2016-03-31    0.1        David       Entity done
--- 2016-04-04	   0.2        David       State machine in progress
+-- 2016-04-04    0.2        David       State machine in progress
 -- 2016-04-05    1.0        David       Complete
 -------------------------------------------------------------------------------
 LIBRARY ieee;
