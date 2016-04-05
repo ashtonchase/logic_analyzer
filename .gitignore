@@ -1,0 +1,3 @@
+*.bak
+test/UART_tb.vhd.bak
+*.vhd~

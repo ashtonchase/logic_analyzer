@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : SUMPComms.vhd
 -- Created    : 2016-02-22
--- Last update: 2016-03-28
+-- Last update: 2016-04-04
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: This is the top module for comms between the SUMP module and
@@ -39,19 +39,18 @@ use ieee.std_logic_1164.all;
 use work.all;
 
 entity SUMPComms is
-  port(clk               : in  std_logic;  -- clock
-       rst               : in  std_logic;  -- reset
-       rx                : in  std_logic;  -- data line from top level
-       tx                : out std_logic;
-       tx_command        : in  std_logic_vector(31 downto 0);  -- data from storage
-       ready_for_command : in  std_logic;  -- flag for data message collect
-       command_ready     : out std_logic_vector (1 downto 0);  -- flags for data message collect
+  port(clk           : in  std_logic;   -- clock
+       rst           : in  std_logic;   -- reset
+       rx            : in  std_logic;   -- data line from top level
+       tx            : out std_logic;
+       tx_command    : in  std_logic_vector(31 downto 0);  -- data from storage
+       --  ready_for_command : in  std_logic;  -- flag for data message collect
+       command_ready : out std_logic_vector (1 downto 0);  -- flags for data message collect
 
        data_ready : in  std_logic;      -- flag for transmit message
        data_sent  : out std_logic;      -- flag for transmit message
 
-       command      : out std_logic_vector(7 downto 0);  -- commands for message handler
-       command_data : out std_logic_vector(31 downto 0));  -- commands for message handler
+       command : out std_logic_vector(7 downto 0));  -- commands for message handler
 
 end entity SUMPComms;
 
@@ -69,9 +68,7 @@ architecture comms of SUMPComms is
   signal tx_data_ready : std_logic;     -- stream out stop bit sent
   signal tx_data_sent  : std_logic;     -- ready for rx
 
-  signal data_count       : integer range 0 to 15 := 0;
-  signal comm_signal      : std_logic_vector(7 downto 0);  -- commands for message handler
-  signal comm_data_signal : std_logic_vector(31 downto 0);  -- commands for message handler
+  signal comm_signal : std_logic_vector(7 downto 0);  -- commands for message handler
 
   constant baud_rate  : integer := 9600;      -- sorta normal baud
   constant clock_freq : integer := 10000000;  -- 10MHz
@@ -99,51 +96,27 @@ begin
 
     elsif (clk = '1' and clk'event) then
       rx_get_more_data <= '1';
+      command_ready = '0';
       state_selector : case rx_curr_state is
         when Init =>
           rx_next_state <= Wait_State;
           data_count    <= 0;
-          command_ready <= "00";
+          command_ready <= '0';
 
         when Wait_State =>
           rx_next_state <= Wait_State;
-          command_ready <= "00";
 
           if rx_data_ready = '1' then
-            rx_next_state <= Drop_Wait;
+            rx_next_state <= Command_Received;
             comm_signal   <= data_out;
-            data_count    <= 0;
+            command <= comm_signal;
+            command_ready = '1';
           end if;
 
-        when Drop_Wait =>
-          rx_next_state <= Drop_Wait;
-          command       <= comm_signal;
-          command_ready <= "10";
+        when Command_Recieved =>
+          rx_next_state <= Command_Received;
 
           if rx_data_ready = '0' then
-            rx_next_state <= Command_Received;
-          end if;
-
-        when Command_Received =>
-          rx_next_state <= Command_Received;
-          command_ready <= "10";
-          if rx_data_ready = '1' then
-            rx_next_state       <= Drop_Wait;
-            data_count          <= data_count + 1;
-            comm_data_signal <= data_out & comm_data_signal(31 downto 8);
-          end if;
-
-          if data_count = 4 then
-            rx_next_state <= Wait_For_Ready;
-          end if;
-
-        when Wait_For_Ready =>
-          rx_next_state    <= Wait_For_Ready;
-          rx_get_more_data <= '0';
-          command_ready    <= "11";
-          command_data     <= comm_data_signal;
-
-          if ready_for_command = '1' then
             rx_next_state <= Wait_State;
           end if;
 
