@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : msg_processor.vhd
 -- Created    : 2016-03-17
--- Last update: 2016-04-04
+-- Last update: 2016-04-05
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: The message processor waits for the UART module to provide 
@@ -31,9 +31,10 @@
 -------------------------------------------------------------------------------
 -- Revisions  :
 -- Date        Version      Author      Description
--- 2016-03-17      0.0      David	    Created
--- 2016-03-31      0.1      David	    Entity done
--- 2016-04-04	   0.2      David       State machine in progress
+-- 2016-03-17    0.0        David       Created
+-- 2016-03-31    0.1        David       Entity done
+-- 2016-04-04	   0.2        David       State machine in progress
+-- 2016-04-05    1.0        David       Complete
 -------------------------------------------------------------------------------
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
@@ -49,7 +50,7 @@ entity msg_processer is
 		byte_new : in std_logic;  -- Strobe to indicate new byte
 
 		-- Sample Rate Control Interface
-		sample_f : out std_logic_vector(31 downto 0);  -- Sampling frequency to Sample Rate Control
+		sample_f : out std_logic_vector(23 downto 0);  -- Sampling frequency to Sample Rate Control
 		
 		-- Capture Control Interface
 		reset     : out std_logic;  -- Reset capture control
@@ -75,14 +76,14 @@ begin
 	begin
 		if rising_edge(clk) then
 			if rst = '1' then
-				state <= INIT;
-				sample_f <= 0;
-				reset <= '0';
-				armed <= '0';
-				read_cnt <= x"0000";
+				reset     <= '0';
+				armed     <= '0';
+				read_cnt  <= x"0000";
 				delay_cnt <= x"0000";
-				trig_msk <= x"00000000";
+				sample_f  <= x"000000";				
+				trig_msk  <= x"00000000";
 				trig_vals <= x"00000000";
+				state     <= INIT;
 			else
 				case state is
 					when INIT =>
@@ -125,12 +126,17 @@ begin
 							when x"02" =>		-- ID (unimplemented)
 							when x"11" =>		-- XON (unimplemented)
 							when x"13" =>   -- XOFF (unimplemented)
-							when x"C0" | x"C4" | x"C8" | x"CC" =>		-- Set Trigger Mask
-							when x"C1" | x"C5" | x"C9" | x"CD" =>		-- Set Trigger Values
-							when x"C2" | x"C6" | x"CA" | x"CE" =>		-- Set Trigger Configuration (unimplemented)
-							when x"80" =>		-- Set Divider
-							when x"81" =>		-- Set Read & Delay Count
-							when x"82" =>		-- Set Flags
+							when x"C0" | x"C4" | x"C8" | x"CC" =>  -- Set Trigger Mask
+								trig_msk <= data_in;
+							when x"C1" | x"C5" | x"C9" | x"CD" =>  -- Set Trigger Values
+								trig_vals <= data_in;
+							when x"C2" | x"C6" | x"CA" | x"CE" =>  -- Set Trigger Configuration (unimplemented)
+							when x"80" =>                          -- Set Divider
+								sample_f <= data_in(23 downto 0);
+							when x"81" =>                          -- Set Read & Delay Count
+								read_cnt <= data_in(15 downto 0);
+								delay_cnt <= data_in(31 downto 16);
+							when x"82" =>                          -- Set Flags (unimplemented)
 						end case;
 						state <= INIT;
 				end case;
@@ -138,10 +144,3 @@ begin
 		end if;
 	end process;
 end architecture;
-
-
-
-
-
-
-
