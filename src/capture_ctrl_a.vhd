@@ -119,7 +119,7 @@ ARCHITECTURE behavioral OF capture_ctrl IS
 BEGIN  -- ARCHITECTURE behavioral
 
   --fast trigger detect
-  trig <='1' when ((din_ff AND par_trig_val_l) = par_trig_msk_l) else
+  trig <='1' when ((din_ff AND par_trig_msk_l) = (par_trig_val_l AND par_trig_msk_l)) else
          '0';
   --fast adds
   capture_cnt_plus<=capture_cnt + 1; 
@@ -201,11 +201,11 @@ BEGIN  -- ARCHITECTURE behavioral
                 state <= DELAY_HOLD;
               END IF should_delay;
               triggered_o <= '1';
-              capture_cnt<=capture_cnt_plus;
+              --capture_cnt<=capture_cnt_plus;
             END IF is_trigged;
           -------------------------------------------------------------------
           WHEN DELAY_HOLD =>
-            is_dly_done : IF (delay_cnt = to_integer(UNSIGNED(delay_cnt_4x_l))*8) THEN
+            is_dly_done : IF (delay_cnt = to_integer(UNSIGNED(delay_cnt_4x_l))*4) THEN
               delay_cnt <= 0;
               state     <= CAPTURE_DATA;
             ELSIF sample_enable = '1' THEN
@@ -218,11 +218,11 @@ BEGIN  -- ARCHITECTURE behavioral
             triggered_o      <= '1';
 
             --will the next sample be the last one, the go ahead an assert tlast.
-            is_ready_for_tlast : IF (capture_cnt+1 = to_integer(UNSIGNED(read_cnt_4x_l))*8) THEN
+            is_ready_for_tlast : IF (capture_cnt+1 = to_integer(UNSIGNED(read_cnt_4x_l))*4) THEN
               fifo_tlast_o <= '1';
             END IF is_ready_for_tlast;
 
-            is_done : IF (capture_cnt = to_integer(UNSIGNED(read_cnt_4x_l))*8) THEN
+            is_done : IF (capture_cnt = to_integer(UNSIGNED(read_cnt_4x_l))*4) THEN
               state     <= INIT;
               delay_cnt <= 0;
             --else more samples to collect

@@ -74,9 +74,9 @@ begin
 	process(clk)
 	begin
 		if rising_edge(clk) then
+			reset     <= '0';
+			armed     <= '0';
 			if rst = '1' then
-				reset     <= '0';
-				armed     <= '0';
 				read_cnt  <= x"0000";
 				delay_cnt <= x"0000";
 				sample_f  <= x"000000";				

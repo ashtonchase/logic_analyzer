@@ -64,7 +64,7 @@ begin
 	begin
 		if rising_edge(clk) then
 			if rst = '1' then
-				freq      <= 0;
+				freq      <= 1;
 				max_count <= 0;
 				count     <= 0;
 				sample_en <= '0';

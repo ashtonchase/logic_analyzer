@@ -108,8 +108,8 @@ begin
 
           if rx_data_ready = '1' then
             rx_next_state <= Command_Received;
-            comm_signal   <= data_out;
-            command       <= comm_signal;
+            -- comm_signal   <= data_out;
+            command       <= data_out;
             command_ready <= '1';
           end if;
 
@@ -125,6 +125,7 @@ begin
 
       end case state_selector;
     end if clock_entry;
+    rx_curr_state <= rx_next_state;
   end process command_reciever;
 
 

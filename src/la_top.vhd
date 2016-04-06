@@ -158,7 +158,7 @@ begin  -- ARCHITECTURE structural
       triggered      => triggered, 
       rst_cmd        => rst_cmd,
       arm_cmd        => arm_cmd,
-      sample_enable  => sample_enable,
+      sample_enable  => '1',
       sample_cnt_rst => sample_cnt_rst,
       delay_cnt_4x   => delay_cnt_4x,
       read_cnt_4x    => read_cnt_4x,
