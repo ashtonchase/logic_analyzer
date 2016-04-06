@@ -42,7 +42,7 @@ ENTITY zed_top IS
      --Buttons 
       BTND           : in  std_logic;
      --Temporary Data Ouput (JA10-JA7, JA4-JA1) 
-    -- JA10, JA9, JA8, JA7, JA4, JA3, JA2, JA1 : out std_logic;
+    --JA10, JA9, JA8, JA7, JA4, JA3, JA2, JA1 : out std_logic;
      --UART SIGNALS
      JB4                                     : in  std_logic := 'H';  --RX
      JB1                                     : out std_logic;  --TX
@@ -81,12 +81,16 @@ ARCHITECTURE top OF zed_top IS
     alias reset_btn : std_logic is BTND;
     alias CLK       : std_logic is GCLK;
     alias UART_RX   : std_logic is JB4;
-    alias UART_TX   : std_logic is JB1;
+    signal UART_TX   : std_logic; 
   
 
 BEGIN  -- ARCHITECTURE top
 
-
+    
+      LD7<=UART_RX;--just activity indicator
+      LD6<=UART_TX;--just activity indicator
+      JB1<=UART_TX;--send UART_TX out
+  
 
 
   -----------------------------------------------------------------------------
@@ -146,7 +150,11 @@ BEGIN  -- ARCHITECTURE top
       
       --UART INTERFACES
       uart_rx => UART_RX, -- UART Receive Data
-      uart_tx => UART_TX); -- UART Transmit Data
+      uart_tx => UART_TX, -- UART Transmit Data
+      armed => LD1, 
+      triggered => LD2,
+      capture_rdy=>LD0);
+      
   
 
 END ARCHITECTURE top;

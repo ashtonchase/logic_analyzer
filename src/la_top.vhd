@@ -89,7 +89,11 @@ entity la_top is
     din     : in  std_logic_vector(31 downto 0) := (others => '0');
     --UART INTERFACES
     uart_rx : in  std_logic;            -- UART Receive Data
-    uart_tx : out std_logic);           -- UART Transmit Data
+    uart_tx : out std_logic;           -- UART Transmit Data
+    armed  : out std_logic;           
+    triggered : out std_logic;           
+    capture_rdy : out std_logic);          
+     
     
 begin
 
@@ -104,8 +108,7 @@ end entity la_top;
 architecture structural of la_top is
 
   -- LA Control Signals
-  signal armed           : std_logic;
-  signal triggered       : std_logic;
+  
   signal rst_cmd         : std_logic                       := '0';
   signal arm_cmd         : std_logic;
   signal sample_enable   : std_logic                       := '1';
@@ -114,7 +117,7 @@ architecture structural of la_top is
   signal read_cnt_4x     : std_logic_vector(16-1 downto 0) := (others => '1');
   signal par_trig_msk    : std_logic_vector(32-1 downto 0) := (others => '0');
   signal par_trig_val    : std_logic_vector(32-1 downto 0) := (others => '1');
-  signal capture_rdy     : std_logic;
+ 
   
   -- Input to Storage Signals
   signal in_fifo_tdata   : std_logic_vector(31 downto 0);
@@ -150,12 +153,12 @@ begin  -- ARCHITECTURE structural
       rst            => rst,
       --
       din            => din(7 downto 0),
-      armed          => armed,  -- FIX: NOT USED
-      triggered      => triggered, -- FIX: NOT USED
+      armed          => armed,  
+      triggered      => triggered, 
       rst_cmd        => rst_cmd,
       arm_cmd        => arm_cmd,
       sample_enable  => sample_enable,
-      sample_cnt_rst => sample_cnt_rst, -- FIX: NOT USED
+      sample_cnt_rst => sample_cnt_rst,
       delay_cnt_4x   => delay_cnt_4x,
       read_cnt_4x    => read_cnt_4x,
       par_trig_msk   => par_trig_msk,
@@ -227,7 +230,7 @@ begin  -- ARCHITECTURE structural
       rst               => rst,
       
       sample_p => sample_f,
-      reset           => rst_cmd,
+      reset           => sample_cnt_rst,
       sample_en           => sample_enable);
 
 end architecture structural;

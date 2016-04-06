@@ -56,6 +56,8 @@ begin
 	process(clk)
 	begin
 		if rising_edge(clk) then
+			sample_en <= '1';
+                    freq <= 1;
 			if rst = '1' then
 				sample_en <= '0';
 				freq <= 0;
