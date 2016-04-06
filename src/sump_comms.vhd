@@ -45,7 +45,7 @@ entity SUMPComms is
        rst           : in  std_logic;   -- reset
        rx            : in  std_logic;   -- data line from top level
        tx            : out std_logic;
-       tx_command    : in  std_logic_vector(31 downto 0);  -- data from storage
+       tx_command    : in  std_logic_vector(7 downto 0);  -- data from storage
 
        command_ready : out std_logic;   -- flags for data message collect
 
@@ -165,7 +165,7 @@ begin
           tx_next_state <= Send_Data;
 
           if tx_data_sent = '1' then
-            tx_send_counter = tx_send_counter + 1;
+            tx_send_counter <= tx_send_counter + 1;
             tx_next_state <= Drop_Wait;
           end if;
 
