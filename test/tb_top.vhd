@@ -38,9 +38,9 @@ entity tb_top is
 end tb_top;
 
 architecture behav of tb_top is
-    signal clk : std_logic;
+    signal clk : std_logic := '0';
     signal rst : std_logic;
-    signal logic_in : std_logic_vector(31 downto 0);
+    signal logic_in : std_logic_vector(31 downto 0) := x"deadbeef";
     
     signal msg_finish : std_logic;
         
@@ -48,8 +48,8 @@ architecture behav of tb_top is
     signal poll_enable : std_logic;
     signal poll_start : std_logic;
     
-    signal uart_rx : std_logic;
-    signal uart_tx : std_logic;
+    signal uart_rx : std_logic := '1';
+    signal uart_tx : std_logic := '1';
 
 
     constant BAUD_DIVIDER : integer := 100;
@@ -104,6 +104,9 @@ begin
         constant c_run : cmd_record := ((x"01", others => x"00"), 1);
         constant c_test_byte : cmd_record := ((x"A5", others => x"00"), 1);
         constant c_trig_mask : cmd_record := ((x"C0", x"11", x"BA", x"5E", x"BA", others => x"00"), 5);
+        constant c_trig_val : cmd_record := ((x"C1", x"EF", x"BE", x"AD", x"DE", others => x"00"), 5);
+        constant c_read_cnt : cmd_record := ((x"81", x"04", x"00", x"04", x"00", others => x"00"), 5);
+        constant c_set_divide : cmd_record := ((x"80", x"08", x"00", x"00", x"00", others => x"00"), 5);
         signal resp_to_send : cmd_record;
     begin
         baudrate_p : process(clk) is
@@ -141,15 +144,18 @@ begin
                     msg_finish <= '1';
                 else
                     -- Where you control what messages are sent
-                    if resp_count=0 then
-                        resp_to_send <= c_test_byte;
-                    elsif resp_count=1 then
-                        resp_to_send <= c_reset;
-                    elsif resp_count=2 then
-                        resp_to_send <= c_trig_mask;
-                    elsif resp_count=3 then
-                        resp_to_send <= c_run;
-                    end if;
+                    case resp_count is
+                        when 0 => resp_to_send <= c_reset;
+                        when 1 => resp_to_send <= c_trig_mask;
+                        when 2 => resp_to_send <= c_trig_val;
+                        when 3 => resp_to_send <= c_read_cnt;
+                        when 4 => resp_to_send <= c_set_divide;
+                        when 5 => resp_to_send <= c_run;
+                        when 6 => resp_to_send <= c_trig_mask;
+                        when 7 => resp_to_send <= c_reset;
+                        when 8 => resp_to_send <= c_reset;
+                        when others =>
+                    end case;
                     if msg_finish='0' then
                         if baud_enable='1' then
                             if count=8 then
