@@ -142,6 +142,7 @@ architecture structural of la_top is
   
   -- Message Processing Signals
   signal sample_f : std_logic_vector(23 downto 0);
+  signal armed_int : std_logic;
 
 begin  -- ARCHITECTURE structural
 
@@ -153,7 +154,7 @@ begin  -- ARCHITECTURE structural
       rst            => rst,
       --
       din            => din(7 downto 0),
-      armed          => armed,  
+      armed          => armed_int,  
       triggered      => triggered, 
       rst_cmd        => rst_cmd,
       arm_cmd        => arm_cmd,
@@ -231,7 +232,10 @@ begin  -- ARCHITECTURE structural
       
       sample_p => sample_f,
       reset           => sample_cnt_rst,
+      armed          => armed_int,  
       sample_en           => sample_enable);
+
+  armed <= armed_int;
 
 end architecture structural;
 
