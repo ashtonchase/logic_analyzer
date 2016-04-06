@@ -51,8 +51,7 @@ entity SUMPComms is
 
        data_ready : in  std_logic;      -- flag for transmit message
        data_sent  : out std_logic;      -- flag for transmit message
-       send_data : in std_logic_vector(31 downto 0);  -- data to send to 
-
+ 
        command : out std_logic_vector(7 downto 0));  -- commands for message handler
 
 end entity SUMPComms;
