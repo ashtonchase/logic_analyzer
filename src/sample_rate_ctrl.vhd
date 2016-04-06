@@ -57,7 +57,8 @@ architecture behave of sample_rate_ctrl is
 	signal freq      : natural := 1;
 	signal max_count : natural := 1;
 	signal count     : natural := 0;
-
+	signal sample    : std_logic := '0';
+	
 begin
 	process(clk)
 	begin
@@ -66,7 +67,7 @@ begin
 				freq      <= 0;
 				max_count <= 0;
 				count     <= 0;
-				sample_en <= 0;
+				sample_en <= '0';
 			else
 				-- Only update sample rate if cap control isn't armed
 				if armed /= '1' then
@@ -80,9 +81,10 @@ begin
 					count <= count + 1;
 				else
 					count <= 0;
-					sample_en <= not sample_en;
+					sample <= not sample;
 				end if;				
 			end if;
 		end if;
 	end process;
+	sample_en <= sample;
 end architecture;
