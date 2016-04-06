@@ -29,6 +29,9 @@
 -- Date        Version  Author      Description
 -- 2016-02-22      1.0      ashton          Created
 -------------------------------------------------------------------------------
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 ENTITY zed_top IS
 
@@ -55,7 +58,7 @@ ARCHITECTURE top OF zed_top IS
       (                                 -- Clock in ports
         clk_in1   : IN  STD_LOGIC;
         -- Clock out ports
-        clk_25mhz : OUT STD_LOGIC;
+        clk_out1 : OUT STD_LOGIC;
         -- Status and control signals
         reset     : IN  STD_LOGIC;
         locked    : OUT STD_LOGIC
