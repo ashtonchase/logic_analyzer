@@ -1,13 +1,13 @@
 -------------------------------------------------------------------------------
--- Title      : Zybo Board Top Level
+-- Title      : ZED Board Top Level
 -- Project    : fpga_logic_analyzer
 -------------------------------------------------------------------------------
--- File       : zybo_top.vhd
+-- File       : zed_top.vhd
 -- Created    : 2016-02-22
 -- Last update: 2016-02-22
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
--- Description: Xilinx Zynq 7000 on a Digilent Zybo Board Top Level Module, 
+-- Description: Xilinx Zynq 7000 on a Digilent Zed Board Top Level Module, 
 -------------------------------------------------------------------------------
 -- Copyright (c) 2016 Ashton Johnson, Paul Henny, Ian Swepston, David Hurt
 -------------------------------------------------------------------------------
@@ -30,20 +30,22 @@
 -- 2016-02-22      1.0      ashton          Created
 -------------------------------------------------------------------------------
 
-ENTITY zybo_top IS
+ENTITY zed_top IS
 
   PORT (
     clk : IN  STD_LOGIC;                      -- 125 MHz clock
     je  : IN  STD_LOGIC_VECTOR(7 DOWNTO 0);  -- PMOD JE inputs
     led : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);  --LED outputs
     sw  : IN  STD_LOGIC_VECTOR(3 DOWNTO 0);  -- Switches
-    btn : IN  STD_LOGIC_VECTOR(3 DOWNTO 0)   --Buttons
+    btn : IN  STD_LOGIC_VECTOR(3 DOWNTO 0);   --Buttons
+    uart_rx : in  std_logic;            -- UART Receive Data
+    uart_tx : out std_logic           -- UART Transmit Data
     );
 
-END ENTITY zybo_top;
+END ENTITY zed_top;
 
 
-ARCHITECTURE top OF zybo_top IS
+ARCHITECTURE top OF zed_top IS
 
   -----------------------------------------------------------------------------
   -- Components
@@ -89,14 +91,11 @@ BEGIN  -- ARCHITECTURE top
       -- Clock in ports
       clk_in1  => clk,
       -- Clock out ports  
-      clk_out1 => run_clk,
+      clk_out1 => run_clk, -- FIXIT: Port map doesn't match component, can't open IP to see what is right
       -- Status and control signals                
       reset    => reset_btn,
       locked   => clk_locked
       );
-
-
-
 
   -- purpose: this process will reset the system when btn0 is pressed
   -- type   : combinational
@@ -111,5 +110,24 @@ BEGIN  -- ARCHITECTURE top
     END IF;
   END PROCESS reset_proc;
 
+  la_top_inst : entity work.la_top
+    generic map (
+      BAUD_RATE => 115200,
+      INPUT_CLK_RATE_HZ => 100_000_000,
+      DATA_WIDTH  => 8,
+      SAMPLE_DEPTH  => 2**8)
+    port map (
+      --COMMON INTERFACES
+      clk => run_clk,
+      rst => reset, --reset, (async high/ sync low)
+      
+      --data input. default to zeros so you don't have to hook all 32 lines up.
+      din(31 downto 8) => (others => '0'),
+      din(7 downto 0) => je,
+      
+      --UART INTERFACES
+      uart_rx => uart_rx, -- UART Receive Data
+      uart_tx => uart_tx); -- UART Transmit Data
+  
 
 END ARCHITECTURE top;

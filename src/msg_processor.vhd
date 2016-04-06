@@ -38,8 +38,9 @@
 -------------------------------------------------------------------------------
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
+use ieee.numeric_std.all;
 
-entity msg_processer is
+entity msg_processor is
 	port(
 		-- Global Signals
 		clk : in std_logic;  -- Clock
@@ -55,10 +56,10 @@ entity msg_processer is
 		-- Capture Control Interface
 		reset     : out std_logic;  -- Reset capture control
 		armed     : out std_logic;  -- Arm capture control
-		read_cnt  : out std_logic(15 downto 0);  -- Number of samples (divided by 4) to send to memory
-		delay_cnt : out std_logic(15 downto 0);  -- Number of samples (divided by 4) to capture after trigger
-		trig_msk  : out std_logic(31 downto 0);  -- Define which trigger values must match
-		trig_vals : out std_logic(31 downto 0);  -- Set the trigger's individual bit values
+		read_cnt  : out std_logic_vector(15 downto 0);  -- Number of samples (divided by 4) to send to memory
+		delay_cnt : out std_logic_vector(15 downto 0);  -- Number of samples (divided by 4) to capture after trigger
+		trig_msk  : out std_logic_vector(31 downto 0);  -- Define which trigger values must match
+		trig_vals : out std_logic_vector(31 downto 0)  -- Set the trigger's individual bit values
 	);  -- port
 end entity msg_processor;
 
@@ -90,10 +91,10 @@ begin
 							state <= READ_CMD;
 						end if;
 					when READ_CMD =>
-						if to_integer(unsigned(cmd_in)) <= x"13" then
+						if to_integer(unsigned(cmd_in)) <= 19 then -- x"13"
 							state <= DO_CMD;  -- Short command
 						else
-							state <= WORD1;   -- Long command
+							state <= BYTE1;   -- Long command
 						end if;
 					when BYTE1 =>
 						if byte_new = '1' then
@@ -135,6 +136,7 @@ begin
 								read_cnt <= data_in(15 downto 0);
 								delay_cnt <= data_in(31 downto 16);
 							when x"82" =>                          -- Set Flags (unimplemented)
+                            when others =>
 						end case;
 						state <= INIT;
 				end case;

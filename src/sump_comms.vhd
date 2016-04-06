@@ -39,11 +39,13 @@ use ieee.std_logic_1164.all;
 use work.all;
 
 entity SUMPComms is
+  generic (baud_rate  : positive := 9600;
+           clock_freq : positive := 100_000_000);  -- Make sure we keep integer division here
   port(clk           : in  std_logic;   -- clock
        rst           : in  std_logic;   -- reset
        rx            : in  std_logic;   -- data line from top level
        tx            : out std_logic;
-       tx_command    : in  std_logic_vector(31 downto 0);  -- data from storage
+       tx_command    : in  std_logic_vector(7 downto 0);  -- data from storage
        --  ready_for_command : in  std_logic;  -- flag for data message collect
        command_ready : out std_logic;  -- flags for data message collect
 
@@ -70,9 +72,6 @@ architecture comms of SUMPComms is
 
   signal comm_signal : std_logic_vector(7 downto 0);  -- commands for message handler
 
-  constant baud_rate  : integer := 9600;      -- sorta normal baud
-  constant clock_freq : integer := 10000000;  -- 10MHz
-
 begin
   u1 : entity work.uart_comms
     generic map (clock_freq => clock_freq, baud_rate => baud_rate)
@@ -96,7 +95,7 @@ begin
 
     elsif (clk = '1' and clk'event) then
       rx_get_more_data <= '1';
-      command_ready = '0';
+      command_ready <= '0';
       state_selector : case rx_curr_state is
         when Init =>
           rx_next_state <= Wait_State;
@@ -109,10 +108,10 @@ begin
             rx_next_state <= Command_Received;
             comm_signal   <= data_out;
             command <= comm_signal;
-            command_ready = '1';
+            command_ready <= '1';
           end if;
 
-        when Command_Recieved =>
+        when Command_Received =>
           rx_next_state <= Command_Received;
 
           if rx_data_ready = '0' then

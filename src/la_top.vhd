@@ -1,4 +1,30 @@
 -------------------------------------------------------------------------------
+-- Title      : Zybo Board Top Level
+-- Project    : fpga_logic_analyzer
+-------------------------------------------------------------------------------
+-- File       : zybo_top.vhd
+-- Created    : 2016-02-22
+-- Last update: 2016-02-22
+-- Standard   : VHDL'08
+-------------------------------------------------------------------------------
+-- Description: Xilinx Zynq 7000 on a Digilent Zybo Board Top Level Module, 
+-------------------------------------------------------------------------------
+-- Copyright (c) 2016 Ashton Johnson, Paul Henny, Ian Swepston, David Hurt
+-------------------------------------------------------------------------------
+-- This program is free software; you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation; either version 2 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License along
+-- with this program; if not, write to the Free Software Foundation, Inc.,
+-- 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+---------------------------------------------------------------------------------------------------------------------
 -- Title      : Logic Analyzer Top Module
 -- Project    : fpga_logic_analyzer
 -------------------------------------------------------------------------------
@@ -51,6 +77,7 @@ use ieee.numeric_std.all;
 entity la_top is
 
   generic (
+    BAUD_RATE  : positive := 115_200;
     INPUT_CLK_RATE_HZ : positive range 10_000_000 to 200_000_000 := 100_000_000;
     DATA_WIDTH        : positive range 1 to 32                   := 8;
     SAMPLE_DEPTH      : positive range 1 to 2**18                := 2**8);
@@ -63,8 +90,8 @@ entity la_top is
     --UART INTERFACES
     uart_rx : in  std_logic;            -- UART Receive Data
     uart_tx : out std_logic);           -- UART Transmit Data
+    
 begin
-
 
   --entity-wide checks
   assert IS_X(clk) = false report "clk is undefined" severity error;
@@ -76,7 +103,7 @@ end entity la_top;
 
 architecture structural of la_top is
 
-
+  -- LA Control Signals
   signal armed           : std_logic;
   signal triggered       : std_logic;
   signal rst_cmd         : std_logic                       := '0';
@@ -88,7 +115,8 @@ architecture structural of la_top is
   signal par_trig_msk    : std_logic_vector(32-1 downto 0) := (others => '0');
   signal par_trig_val    : std_logic_vector(32-1 downto 0) := (others => '1');
   signal capture_rdy     : std_logic;
-  --
+  
+  -- Input to Storage Signals
   signal in_fifo_tdata   : std_logic_vector(31 downto 0);
   signal in_fifo_tvalid  : std_logic;
   signal in_fifo_tlast   : std_logic;
@@ -96,11 +124,21 @@ architecture structural of la_top is
   signal in_fifo_tfull   : std_logic;
   signal in_fifo_tempty  : std_logic;
   signal in_fifo_tflush  : std_logic;
-  --
+  -- Output from Storage Signals
   signal out_fifo_tdata  : std_logic_vector(7 downto 0);
   signal out_fifo_tvalid : std_logic;
   signal out_fifo_tlast  : std_logic;
   signal out_fifo_tready : std_logic;
+  
+  -- Sump Comms Signals
+  signal tx_data : std_logic_vector(7 downto 0);
+  signal command_ready : std_logic;
+  signal data_ready : std_logic;
+  signal data_sent : std_logic;
+  signal sump_byte : std_logic_vector(7 downto 0);
+  
+  -- Message Processing Signals
+  signal sample_f : std_logic_vector(23 downto 0);
 
 begin  -- ARCHITECTURE structural
 
@@ -112,17 +150,17 @@ begin  -- ARCHITECTURE structural
       rst            => rst,
       --
       din            => din(7 downto 0),
-      armed          => armed,
-      triggered      => triggered,
+      armed          => armed,  -- FIX: NOT USED
+      triggered      => triggered, -- FIX: NOT USED
       rst_cmd        => rst_cmd,
       arm_cmd        => arm_cmd,
       sample_enable  => sample_enable,
-      sample_cnt_rst => sample_cnt_rst,
+      sample_cnt_rst => sample_cnt_rst, -- FIX: NOT USED
       delay_cnt_4x   => delay_cnt_4x,
       read_cnt_4x    => read_cnt_4x,
       par_trig_msk   => par_trig_msk,
       par_trig_val   => par_trig_val,
-      capture_rdy    => capture_rdy,
+      capture_rdy    => capture_rdy,  -- FIX: NOT USED, don't need. message_processing will try. you determine if it will work
       --
       fifo_tdata     => in_fifo_tdata,
       fifo_tvalid    => in_fifo_tvalid,
@@ -153,41 +191,44 @@ begin  -- ARCHITECTURE structural
       out_fifo_tready => '1');
 
 
-  SUMP_UART_block : SUMPComms
+  SUMP_UART_block : entity work.SUMPComms
+    generic map (clock_freq => INPUT_CLK_RATE_HZ, baud_rate => baud_rate)
     port map (
       clk               => clk,
       rst               => rst,
       rx                => uart_rx,
       tx                => uart_tx,
-      tx_command        => tx_command,
-      ready_for_command => ready_for_command,
+      tx_command        => tx_data,
       command_ready     => command_ready,
       data_ready        => data_ready,
       data_sent         => data_sent,
-      command           => command);
+      command           => sump_byte);
 
-  Message_processing_block : msg_prog
+  Message_processing_block : entity work.msg_processor
     port map (
       clk               => clk,
       rst               => rst,
       --
-      command_valid     => command_ready,
-      command           => command,
-      data              => command_data,
+      byte_in     => sump_byte,
+      byte_new           => command_ready,
       --
-      ready_for_command => ready_for_command,
-      comand_ready      => command_ready,
+      sample_f => sample_f,
       --outputs
-      arm_cmd           => arm_cmd,
-      rst_cmd           => rst_cmd,
-      sample_enable     => sample_enable,
-      sample_cnt_rst    => sample_cnt_rst,
-      delay_cnt_4x      => delay_cnt_4x,
-      read_cnt_4x       => read_cnt_4x,
-      par_trig_msk      => par_trig_msk,
-      par_trig_val      => par_trig_val,
-      capture_rdy       => capture_rdy
-      )
+      reset           => rst_cmd,
+      armed           => arm_cmd,
+      read_cnt       => read_cnt_4x,
+      delay_cnt      => delay_cnt_4x,
+      trig_msk      => par_trig_msk,
+      trig_vals      => par_trig_val);
+      
+  sample_rate_block : entity work.sample_rate_ctrl -- not implemented yet
+    port map(
+      clk               => clk,
+      rst               => rst,
+      
+      sample_p => sample_f,
+      reset           => rst_cmd,
+      sample_en           => sample_enable);
 
 end architecture structural;
 

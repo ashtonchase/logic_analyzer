@@ -45,7 +45,7 @@ entity sample_rate_ctrl is
 		
 		-- Capture Control Interface
 		reset     : in std_logic;   -- Reset rate clock
-		sample_en : out std_logic;  -- Sample enable
+		sample_en : out std_logic  -- Sample enable
 	);  -- port
 end entity sample_rate_ctrl;
 
@@ -58,7 +58,7 @@ begin
 		if rising_edge(clk) then
 			if rst = '1' then
 				sample_en <= '0';
-				freq <= (others => '0');
+				freq <= 0;
 			else
 				
 			end if;
