@@ -1,10 +1,10 @@
 -------------------------------------------------------------------------------
--- Title      : Message Processor
+-- Title      : Sample Rate Control
 -- Project    : fpga_logic_analyzer
 -------------------------------------------------------------------------------
--- File       : msg_processor.vhd
+-- File       : sample_rate_ctrl.vhd
 -- Created    : 2016-04-05
--- Last update: 2016-04-05
+-- Last update: 2016-04-06
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: The sample rate control simply recieves the sampling frequency
@@ -30,11 +30,14 @@
 -- Revisions  :
 -- Date        Version      Author      Description
 -- 2016-04-05    0.0        David       Created
+-- 2016-04-06    1.0        David       Major functionality complete
 -------------------------------------------------------------------------------
-LIBRARY ieee;
-USE ieee.std_logic_1164.ALL;
+library ieee;
+use ieee.std_logic_1164.ALL;
+use ieee.numeric_std.all;
 
 entity sample_rate_ctrl is
+	generic(clock_freq : positive := 100_000_000);
 	port(
 		-- Global Signals
 		clk : in std_logic;  -- Clock
@@ -44,25 +47,41 @@ entity sample_rate_ctrl is
 		sample_p : in std_logic_vector(23 downto 0);  -- Sample period
 		
 		-- Capture Control Interface
-		reset     : in std_logic;   -- Reset rate clock
+		reset     : in std_logic;  -- Reset rate clock
+		armed     : in std_logic;  -- Indicates that capture control is armed
 		sample_en : out std_logic  -- Sample enable
-	);  -- port
+	);
 end entity sample_rate_ctrl;
 
 architecture behave of sample_rate_ctrl is
-	signal freq : natural range 0 to 16777216 := 0;
+	signal freq      : natural := 1;
+	signal max_count : natural := 1;
+	signal count     : natural := 0;
 
 begin
 	process(clk)
 	begin
 		if rising_edge(clk) then
-			sample_en <= '1';
-                    freq <= 1;
 			if rst = '1' then
-				sample_en <= '0';
-				freq <= 0;
+				freq      <= 0;
+				max_count <= 0;
+				count     <= 0;
+				sample_en <= 0;
 			else
-				
+				-- Only update sample rate if cap control isn't armed
+				if armed /= '1' then
+					freq <= clock_freq / (to_integer(unsigned(sample_p)) + 1);
+					max_count <= (clock_freq/freq)/2;
+				end if;
+				if reset = '1' then
+					count <= 0;
+				end if;
+				if count < (max_count - 1) then
+					count <= count + 1;
+				else
+					count <= 0;
+					sample_en <= not sample_en;
+				end if;				
 			end if;
 		end if;
 	end process;
