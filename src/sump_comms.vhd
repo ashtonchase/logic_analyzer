@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : SUMPComms.vhd
 -- Created    : 2016-02-22
--- Last update: 2016-04-04
+-- Last update: 2016-04-06
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: This is the top module for comms between the SUMP module and
@@ -45,12 +45,13 @@ entity SUMPComms is
        rst           : in  std_logic;   -- reset
        rx            : in  std_logic;   -- data line from top level
        tx            : out std_logic;
-       tx_command    : in  std_logic_vector(7 downto 0);  -- data from storage
-       --  ready_for_command : in  std_logic;  -- flag for data message collect
-       command_ready : out std_logic;  -- flags for data message collect
+       tx_command    : in  std_logic_vector(31 downto 0);  -- data from storage
+
+       command_ready : out std_logic;   -- flags for data message collect
 
        data_ready : in  std_logic;      -- flag for transmit message
        data_sent  : out std_logic;      -- flag for transmit message
+       send_data : in std_logic_vector(31 downto 0);  -- data to send to 
 
        command : out std_logic_vector(7 downto 0));  -- commands for message handler
 
@@ -58,8 +59,8 @@ end entity SUMPComms;
 
 architecture comms of SUMPComms is
   type states is (Init, Wait_State, Drop_Wait, Command_Received, Wait_For_Ready,
-                  Send_Data, Send_Complete);
-  signal rx_curr_state, rx_next_state, tx_curr_state, tx_next_state : states;
+                  Shift_Data, Send_Data, Send_Complete);
+  signal rx_curr_state, rx_next_state, tx_curr_state, tx_next_state : states := INIT;
 
 
   signal rx_get_more_data : std_logic;  -- stop bit found for stream in
@@ -69,6 +70,8 @@ architecture comms of SUMPComms is
   signal tx_data_in    : std_logic_vector(7 downto 0) := (others => '0');  -- data to be transmitted
   signal tx_data_ready : std_logic;     -- stream out stop bit sent
   signal tx_data_sent  : std_logic;     -- ready for rx
+  signal tx_send_counter : integer range 0 to 4         := 0;
+  signal tx_data_buffer : std_logic_vector(31 downto 0);
 
   signal comm_signal : std_logic_vector(7 downto 0);  -- commands for message handler
 
@@ -95,7 +98,7 @@ begin
 
     elsif (clk = '1' and clk'event) then
       rx_get_more_data <= '1';
-      command_ready <= '0';
+      command_ready    <= '0';
       state_selector : case rx_curr_state is
         when Init =>
           rx_next_state <= Wait_State;
@@ -107,7 +110,7 @@ begin
           if rx_data_ready = '1' then
             rx_next_state <= Command_Received;
             comm_signal   <= data_out;
-            command <= comm_signal;
+            command       <= comm_signal;
             command_ready <= '1';
           end if;
 
@@ -126,41 +129,64 @@ begin
   end process command_reciever;
 
 
-  --command_sender : process (clk)
-  --begin
-  --  clock_entry : if rst = '1' then
-  --    rx_next_state <= Init;
+  command_sender : process (clk)
+  begin
+    clock_entry : if rst = '1' then
+      tx_next_state <= Init;
 
-  --  elsif (clk = '1' and clk'event) then
-  --    data_sent <= '0';
-  --    state_selector : case rx_curr_state is
-  --      when Init =>
-  --        rx_next_state <= Wait_State;
-  --        command_ready <= '0';
+    elsif (clk = '1' and clk'event) then
+      data_sent <= '0';
+      tx_data_ready <= '0';
+      state_selector : case tx_curr_state is
+        when Init =>
+          tx_next_state <= Wait_State;
+          tx_send_counter <= 0;
+          
+        when Wait_State =>
+          tx_next_state <= Wait_State;
 
-  --      when Wait_State =>
-  --        rx_next_state <= Wait_State;
+          if data_ready = '1' then
+            tx_next_state <= Shift_Data;
+            tx_send_counter <= 0;
+            tx_data_buffer <= tx_command;
+            
+          end if;
 
-  --        if rx_data_ready = '1' then
-  --          rx_next_state <= Command_Received;
-  --          comm_signal   <= data_out;
-  --          command <= comm_signal;
-  --          command_ready = '1';
-  --        end if;
+        when Shift_Data =>
+          if tx_send_counter = 4 then
+            tx_next_state <= Send_Complete;
+          else
+          tx_data_in <= tx_data_buffer(31 downto 24);
+          tx_data_buffer <= tx_data_buffer(23 downto 0) & "00000000";
+          tx_data_ready <= '1';
+          tx_next_state <= Send_Data;
+          end if;
 
-  --      when Command_Recieved =>
-  --        rx_next_state <= Command_Received;
+       when Send_Data =>
+          tx_next_state <= Send_Data;
 
-  --        if rx_data_ready = '0' then
-  --          rx_next_state <= Wait_State;
-  --        end if;
+          if tx_data_sent = '1' then
+            tx_send_counter = tx_send_counter + 1;
+            tx_next_state <= Drop_Wait;
+          end if;
 
-  --      when others =>
-  --        rx_next_state <= Init;
+       when Drop_Wait =>
+          tx_next_state <= Drop_Wait;
 
-  --    end case state_selector;
-  --  end if clock_entry;
-  --end process command_sender;
+          if tx_data_sent = '0' then
+            tx_next_state <= Shift_Data;
+          end if;
+
+       when Send_Complete =>
+          tx_next_state <= Wait_State;
+          data_sent <= '1';
+          
+        when others =>
+          tx_next_state <= Init;
+
+      end case state_selector;
+    end if clock_entry;
+  end process command_sender;
 
 
 
