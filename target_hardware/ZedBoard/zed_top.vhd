@@ -36,13 +36,18 @@ use ieee.numeric_std.all;
 ENTITY zed_top IS
 
   PORT (
-    clk : IN  STD_LOGIC;                      -- 125 MHz clock
-    je  : IN  STD_LOGIC_VECTOR(7 DOWNTO 0);  -- PMOD JE inputs
-    led : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);  --LED outputs
-    sw  : IN  STD_LOGIC_VECTOR(3 DOWNTO 0);  -- Switches
-    btn : IN  STD_LOGIC_VECTOR(3 DOWNTO 0);   --Buttons
-    uart_rx : in  std_logic;            -- UART Receive Data
-    uart_tx : out std_logic           -- UART Transmit Data
+    GCLK                                    : in  std_logic;  -- 100 MHz clock
+     --LED Outputs    
+     LD0, LD1, LD2, LD3, LD4, LD5, LD6, LD7  : out std_logic;
+     --Buttons 
+      BTND           : in  std_logic;
+     --Temporary Data Ouput (JA10-JA7, JA4-JA1) 
+    -- JA10, JA9, JA8, JA7, JA4, JA3, JA2, JA1 : out std_logic;
+     --UART SIGNALS
+     JB4                                     : in  std_logic := 'H';  --RX
+     JB1                                     : out std_logic;  --TX
+     --Switches
+     SW7, SW6, SW5, SW4, SW3, SW2, SW1, SW0  : in  std_logic
     );
 
 END ENTITY zed_top;
@@ -73,7 +78,11 @@ ARCHITECTURE top OF zed_top IS
   -----------------------------------------------------------------------------
   -- Aliases
   -----------------------------------------------------------------------------
-  ALIAS reset_btn   : STD_LOGIC IS btn(0);
+    alias reset_btn : std_logic is BTND;
+    alias CLK       : std_logic is GCLK;
+    alias UART_RX   : std_logic is JB4;
+    alias UART_TX   : std_logic is JB1;
+  
 
 BEGIN  -- ARCHITECTURE top
 
@@ -126,11 +135,18 @@ BEGIN  -- ARCHITECTURE top
       
       --data input. default to zeros so you don't have to hook all 32 lines up.
       din(31 downto 8) => (others => '0'),
-      din(7 downto 0) => je,
+      din(7) => SW7,
+      din(6) => SW6,
+      din(5) => SW5,
+      din(4) => SW4,
+      din(3) => SW3, 
+      din(2) => SW2,
+      din(1) => SW1,
+      din(0) => SW0,
       
       --UART INTERFACES
-      uart_rx => uart_rx, -- UART Receive Data
-      uart_tx => uart_tx); -- UART Transmit Data
+      uart_rx => UART_RX, -- UART Receive Data
+      uart_tx => UART_TX); -- UART Transmit Data
   
 
 END ARCHITECTURE top;
