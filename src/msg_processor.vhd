@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : msg_processor.vhd
 -- Created    : 2016-03-17
--- Last update: 2016-04-05
+-- Last update: 2016-04-07
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: The message processor waits for the UART module to provide 
@@ -35,6 +35,7 @@
 -- 2016-03-31    0.1        David       Entity done
 -- 2016-04-04    0.2        David       State machine in progress
 -- 2016-04-05    1.0        David       Complete
+-- 2016-04-07    1.1        David       Handles unrecognized commands
 -------------------------------------------------------------------------------
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
@@ -74,8 +75,8 @@ begin
 	process(clk)
 	begin
 		if rising_edge(clk) then
-			reset     <= '0';
-			armed     <= '0';
+			reset <= '0';
+			armed <= '0';
 			if rst = '1' then
 				read_cnt  <= x"0000";
 				delay_cnt <= x"0000";
@@ -91,11 +92,14 @@ begin
 							state <= READ_CMD;
 						end if;
 					when READ_CMD =>
-						if to_integer(unsigned(cmd_in)) <= 19 then -- x"13"
-							state <= DO_CMD;  -- Short command
+						if cmd_in = x"C0" | x"C4" | x"C8" | x"CC" |  -- Trig Mask
+												x"C1" | x"C5" | x"C9" | x"CD" |  -- Trig Vals
+												x"C2" | x"C6" | x"CA" | x"CE" |  -- Trig Config
+												x"80" | x"81" | x"82" then       -- Div, Rd & Dly Cnt, Flgs
+							state <= BYTE1;  -- Recognized long command
 						else
-							state <= BYTE1;   -- Long command
-						end if;
+							state <= DO_CMD  -- Unrecognized command or short command
+						end if;  
 					when BYTE1 =>
 						if byte_new = '1' then
 							data_in(7 downto 0) <= byte_in;
@@ -136,7 +140,7 @@ begin
 								read_cnt <= data_in(15 downto 0);
 								delay_cnt <= data_in(31 downto 16);
 							when x"82" =>                          -- Set Flags (unimplemented)
-                            when others =>
+							when others =>
 						end case;
 						state <= INIT;
 				end case;
