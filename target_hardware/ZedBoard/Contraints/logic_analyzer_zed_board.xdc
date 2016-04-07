@@ -22,3 +22,4 @@ set_output_delay -clock [get_clocks VIRTUAL_clk_out1_clock_gen] -min -add_delay 
 set_output_delay -clock [get_clocks VIRTUAL_clk_out1_clock_gen] -max -add_delay 30.000 [get_ports LD0]
 set_output_delay -clock [get_clocks VIRTUAL_clk_out1_clock_gen] -min -add_delay -10.000 [get_ports LD2]
 set_output_delay -clock [get_clocks VIRTUAL_clk_out1_clock_gen] -max -add_delay 30.000 [get_ports LD2]
+

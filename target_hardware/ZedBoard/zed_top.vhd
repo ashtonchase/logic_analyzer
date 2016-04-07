@@ -86,9 +86,9 @@ ARCHITECTURE top OF zed_top IS
 
 BEGIN  -- ARCHITECTURE top
 
-    
-      LD7<=UART_RX;--just activity indicator
-      LD6<=UART_TX;--just activity indicator
+      LD3<=clk_locked;
+      LD7<=not UART_RX;--just activity indicator
+      LD6<=not UART_TX;--just activity indicator
       JB1<=UART_TX;--send UART_TX out
   
 
@@ -128,8 +128,8 @@ BEGIN  -- ARCHITECTURE top
 
   la_top_inst : entity work.la_top
     generic map (
-      BAUD_RATE => 115200,
-      INPUT_CLK_RATE_HZ => 100_000_000,
+      BAUD_RATE => 115_200,
+      INPUT_CLK_RATE_HZ => 10_000_000,
       DATA_WIDTH  => 8,
       SAMPLE_DEPTH  => 2**8)
     port map (
