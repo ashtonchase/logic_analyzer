@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : sample_rate_ctrl.vhd
 -- Created    : 2016-04-05
--- Last update: 2016-04-06
+-- Last update: 2016-04-07
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: The sample rate control simply recieves the sampling frequency
@@ -31,6 +31,7 @@
 -- Date        Version      Author      Description
 -- 2016-04-05    0.0        David       Created
 -- 2016-04-06    1.0        David       Major functionality complete
+-- 2016-04-07    1.1        David       Correcting errors in divider generation
 -------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.ALL;
@@ -44,7 +45,7 @@ entity sample_rate_ctrl is
 		rst : in std_logic;  -- Synchronous reset
 
 		-- Message Processor Interface
-		sample_p : in std_logic_vector(23 downto 0);  -- Sample period
+		x : in std_logic_vector(23 downto 0);  -- Division factor - 1
 		
 		-- Capture Control Interface
 		reset     : in std_logic;  -- Reset rate clock
@@ -54,35 +55,32 @@ entity sample_rate_ctrl is
 end entity sample_rate_ctrl;
 
 architecture behave of sample_rate_ctrl is
-	signal freq      : natural := 1;
-	signal max_count : natural := 1;
-	signal count     : natural := 0;
-	signal sample    : std_logic := '0';
+	signal div   : natural := 1;  -- Division factor
+	signal count : natural := 0;
 	
 begin
 	process(clk)
 	begin
 		if rising_edge(clk) then
 			if rst = '1' then
-				freq      <= 1;
-				max_count <= 0;
-				count     <= 0;
-				sample_en <= '0';
+				div    <= 0;
+				count  <= 0;
+				sample <= '0';
 			else
 				-- Only update sample rate if cap control isn't armed
 				if armed /= '1' then
-					freq <= clock_freq / (to_integer(unsigned(sample_p)) + 1);
-					max_count <= (clock_freq/freq)/2;
+					div <= x + 1;
 				end if;
 				if reset = '1' then
 					count <= 0;
-				end if;
-				if count < (max_count - 1) then
+				elsif div = 1 then  -- No division
+					sample <= '1';
+				elsif count < div then  -- f = clock/div
 					count <= count + 1;
 				else
 					count <= 0;
 					sample <= not sample;
-				end if;				
+				end if;
 			end if;
 		end if;
 	end process;
