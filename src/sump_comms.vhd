@@ -173,6 +173,7 @@ begin
 
       end case state_selector;
     end if clock_entry;
+    tx_curr_state <= tx_next_state;
   end process command_sender;
 
 

@@ -92,7 +92,8 @@ entity la_top is
     uart_tx : out std_logic;           -- UART Transmit Data
     armed  : out std_logic;           
     triggered : out std_logic;           
-    capture_rdy : out std_logic);          
+    capture_rdy : out std_logic;
+    data_sent : out std_logic);          
      
     
 begin
@@ -134,11 +135,8 @@ architecture structural of la_top is
   signal out_fifo_tready : std_logic;
   
   -- Sump Comms Signals
-  signal tx_data : std_logic_vector(7 downto 0);
-  signal command_ready : std_logic;
-  signal data_ready : std_logic;
-  signal data_sent : std_logic;
   signal sump_byte : std_logic_vector(7 downto 0);
+  signal command_ready : std_logic;
   
   -- Message Processing Signals
   signal sample_f : std_logic_vector(23 downto 0);
@@ -202,9 +200,9 @@ begin  -- ARCHITECTURE structural
       rst               => rst,
       rx                => uart_rx,
       tx                => uart_tx,
-      tx_command        => tx_data,
+      tx_command        => out_fifo_tdata,
       command_ready     => command_ready,
-      data_ready        => data_ready,
+      data_ready        => out_fifo_tvalid,
       data_sent         => data_sent,
       command           => sump_byte);
 
