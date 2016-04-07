@@ -78,7 +78,7 @@ entity la_top is
 
   generic (
     BAUD_RATE  : positive := 115_200;
-    INPUT_CLK_RATE_HZ : positive range 10_000_000 to 200_000_000 := 100_000_000;
+    INPUT_CLK_RATE_HZ : positive range 10_000_000 to 200_000_000 := 10_000_000;
     DATA_WIDTH        : positive range 1 to 32                   := 8;
     SAMPLE_DEPTH      : positive range 1 to 2**18                := 2**8);
   port (
