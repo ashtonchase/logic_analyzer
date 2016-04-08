@@ -78,7 +78,7 @@ entity la_top is
 
   generic (
     BAUD_RATE  : positive := 115_200;
-    INPUT_CLK_RATE_HZ : positive range 10_000_000 to 200_000_000 := 10_000_000;
+    INPUT_CLK_RATE_HZ : positive range 10_000_000 to 200_000_000 := 100_000_000;
     DATA_WIDTH        : positive range 1 to 32                   := 8;
     SAMPLE_DEPTH      : positive range 1 to 2**18                := 2**8);
   port (
@@ -93,7 +93,9 @@ entity la_top is
     armed  : out std_logic;           
     triggered : out std_logic;           
     capture_rdy : out std_logic;
-    data_sent : out std_logic);          
+    data_sent : out std_logic;
+    command_ready : out std_logic;
+    debug : out std_logic_vector(7 downto 0));          
      
     
 begin
@@ -136,13 +138,16 @@ architecture structural of la_top is
   
   -- Sump Comms Signals
   signal sump_byte : std_logic_vector(7 downto 0);
-  signal command_ready : std_logic;
+  signal command_ready_int : std_logic;
   
   -- Message Processing Signals
   signal sample_f : std_logic_vector(23 downto 0);
   signal armed_int : std_logic;
 
 begin  -- ARCHITECTURE structural
+
+  command_ready <= command_ready_int;
+  debug <= sump_byte;
 
   capture_control_block : entity work.capture_ctrl
     generic map (
@@ -201,7 +206,7 @@ begin  -- ARCHITECTURE structural
       rx                => uart_rx,
       tx                => uart_tx,
       tx_command        => out_fifo_tdata,
-      command_ready     => command_ready,
+      command_ready     => command_ready_int,
       data_ready        => out_fifo_tvalid,
       data_sent         => data_sent,
       command           => sump_byte);
@@ -212,7 +217,7 @@ begin  -- ARCHITECTURE structural
       rst               => rst,
       --
       byte_in     => sump_byte,
-      byte_new           => command_ready,
+      byte_new           => command_ready_int,
       --
       sample_f => sample_f,
       --outputs

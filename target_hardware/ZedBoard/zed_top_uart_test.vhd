@@ -32,7 +32,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-entity zybo_top is
+entity zed_uart_top is
 
   port (
     --Clock Source
@@ -72,10 +72,10 @@ entity zybo_top is
     --FIXED_IO_ps_srstb : INOUT STD_LOGIC;
     );
 
-end entity zybo_top;
+end entity zed_uart_top;
 
 
-architecture top of zybo_top is
+architecture top of zed_uart_top is
 
   -----------------------------------------------------------------------------
   -- Components

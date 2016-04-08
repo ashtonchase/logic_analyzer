@@ -75,6 +75,8 @@ ARCHITECTURE top OF zed_top IS
   SIGNAL reset      : STD_LOGIC := '1';  -- reset (async high, sync low)
   SIGNAL run_clk    : STD_LOGIC := '0';  -- clock output of the clocking wizard
   SIGNAL clk_locked : STD_LOGIC := '0';  -- indicator if the clocking wizard has locked
+  
+  signal debug : std_logic_vector(7 downto 0);
   -----------------------------------------------------------------------------
   -- Aliases
   -----------------------------------------------------------------------------
@@ -86,11 +88,20 @@ ARCHITECTURE top OF zed_top IS
 
 BEGIN  -- ARCHITECTURE top
 
-      LD3<=clk_locked;
-      LD7<=not UART_RX;--just activity indicator
-      LD6<=not UART_TX;--just activity indicator
-      JB1<=UART_TX;--send UART_TX out
-  
+    LD3<=clk_locked;
+    LD7<=not UART_RX;--just activity indicator
+    LD6<=not UART_TX;--just activity indicator
+    JB1<=UART_TX;--send UART_TX out
+    
+    -- Debug Testing
+    -- LD7 <= debug(7);
+    -- LD6 <= debug(6);
+    -- LD5 <= debug(5);
+    -- LD4 <= debug(4);
+    -- LD3 <= debug(3);
+    -- LD2 <= debug(2);
+    -- LD1 <= debug(1);
+    -- LD0 <= debug(0);
 
 
   -----------------------------------------------------------------------------
@@ -107,7 +118,7 @@ BEGIN  -- ARCHITECTURE top
       -- Clock in ports
       clk_in1  => clk,
       -- Clock out ports  
-      clk_out1 => run_clk, -- FIXIT: Port map doesn't match component, can't open IP to see what is right
+      clk_out1 => run_clk,
       -- Status and control signals                
       reset    => reset_btn,
       locked   => clk_locked
@@ -128,7 +139,7 @@ BEGIN  -- ARCHITECTURE top
 
   la_top_inst : entity work.la_top
     generic map (
-      BAUD_RATE => 115_200,
+      BAUD_RATE => 9600, --115_200,
       INPUT_CLK_RATE_HZ => 10_000_000,
       DATA_WIDTH  => 8,
       SAMPLE_DEPTH  => 2**8)
@@ -153,7 +164,10 @@ BEGIN  -- ARCHITECTURE top
       uart_tx => UART_TX, -- UART Transmit Data
       armed => LD1, 
       triggered => LD2,
-      capture_rdy=>LD0);
+      capture_rdy=>LD0,
+      data_sent=> LD5,
+      command_ready=> LD4,
+      debug=> debug);
       
   
 
