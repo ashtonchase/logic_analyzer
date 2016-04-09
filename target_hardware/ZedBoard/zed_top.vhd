@@ -139,8 +139,8 @@ BEGIN  -- ARCHITECTURE top
 
   la_top_inst : entity work.la_top
     generic map (
-      BAUD_RATE => 9600, --115_200,
-      INPUT_CLK_RATE_HZ => 10_000_000,
+      BAUD_RATE => 115_200,--9600, --115_200,
+      INPUT_CLK_RATE_HZ => 100_000_000,
       DATA_WIDTH  => 8,
       SAMPLE_DEPTH  => 2**8)
     port map (
