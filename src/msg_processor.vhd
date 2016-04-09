@@ -92,14 +92,15 @@ begin
 							state <= READ_CMD;
 						end if;
 					when READ_CMD =>
-						if cmd_in = x"C0" | x"C4" | x"C8" | x"CC" |  -- Trig Mask
-												x"C1" | x"C5" | x"C9" | x"CD" |  -- Trig Vals
-												x"C2" | x"C6" | x"CA" | x"CE" |  -- Trig Config
-												x"80" | x"81" | x"82" then       -- Div, Rd & Dly Cnt, Flgs
-							state <= BYTE1;  -- Recognized long command
-						else
-							state <= DO_CMD  -- Unrecognized command or short command
-						end if;  
+						case cmd_in is 
+						when x"C0" | x"C4" | x"C8" | x"CC" |  -- Trig Mask
+                            x"C1" | x"C5" | x"C9" | x"CD" |  -- Trig Vals
+                            x"C2" | x"C6" | x"CA" | x"CE" |  -- Trig Config
+                            x"80" | x"81" | x"82" => 
+                         state <= BYTE1;  -- Recognized long command    
+                         when others => 
+                            state <= DO_CMD;  -- Unrecognized command or short command
+                            end case;                   
 					when BYTE1 =>
 						if byte_new = '1' then
 							data_in(7 downto 0) <= byte_in;
