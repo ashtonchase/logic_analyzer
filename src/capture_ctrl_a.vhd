@@ -106,6 +106,7 @@ ARCHITECTURE behavioral OF capture_ctrl IS
   SIGNAL fifo_tdata_o     : STD_LOGIC_VECTOR(32-1 DOWNTO 0)         := (OTHERS => '1');
   SIGNAL fifo_tvalid_o    : STD_LOGIC                               := '0';
   SIGNAL fifo_tlast_o     : STD_LOGIC                               := '0';
+  SIGNAL  din_masked, par_val_masked : STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0) := (OTHERS => '0');
 
   SIGNAL trig : STD_LOGIC :='0';
 
@@ -120,8 +121,7 @@ ARCHITECTURE behavioral OF capture_ctrl IS
 BEGIN  -- ARCHITECTURE behavioral
 
   --fast trigger detect
-  trig <='1' when ((din_ff AND par_trig_msk_l) = (par_trig_val_l AND par_trig_msk_l)) else
-         '0';
+
   --fast adds
   capture_cnt_plus<=capture_cnt + 1; 
   delay_cnt_plus<=delay_cnt+1;
@@ -136,9 +136,11 @@ BEGIN  -- ARCHITECTURE behavioral
   capture_rdy <= capture_rdy_o;
   --top lelel assigments
   armed       <= armed_o;
-  triggered   <= triggered_o;
+  triggered   <= trig;
   sample_cnt_rst <= sample_cnt_rst_o;
-
+  
+  din_masked <= din_ff AND par_trig_msk_l;
+  par_val_masked <= par_trig_val_l AND par_trig_msk_l;
   -----------------------------------------------------------------------------
   -- Processes
   -----------------------------------------------------------------------------
@@ -156,8 +158,13 @@ BEGIN  -- ARCHITECTURE behavioral
   BEGIN  -- PROCESS capture_process
     is_clk : IF rising_edge(clk) THEN   -- rising clock edge
       --default assigments
+      if ((din_masked) = (par_val_masked)) then
+        trig <='1' ;
+      else
+         trig <='0';
+      end if;
       din_ff                              <= din;
-      fifo_tdata_o                        <= (OTHERS => '-');
+      fifo_tdata_o                        <= (OTHERS => '0');
       fifo_tdata_o(DATA_WIDTH-1 DOWNTO 0) <= din_ff;
       fifo_tvalid_o                       <= '0';
       fifo_tlast_o                        <= '0';
@@ -172,7 +179,7 @@ BEGIN  -- ARCHITECTURE behavioral
         fsm : CASE state IS
           WHEN INIT =>
             is_fifo_ready : IF fifo_tready = '1' THEN
-              state       <= WAIT_FOR_ARM_CMD;
+              state       <= WAIT_FOR_ARM_OR_ID_CMD;
               capture_cnt <= 0;
               delay_cnt   <= 0;
               armed_o     <= '0';
@@ -182,8 +189,8 @@ BEGIN  -- ARCHITECTURE behavioral
           WHEN WAIT_FOR_ARM_OR_ID_CMD =>
             par_trig_msk_l <= par_trig_msk(DATA_WIDTH-1 DOWNTO 0);
             par_trig_val_l <= par_trig_val(DATA_WIDTH-1 DOWNTO 0);
-            delay_cnt_4x_l <= delay_cnt_4x;
-            read_cnt_4x_l  <= read_cnt_4x;
+            delay_cnt_4x_l <= X"00_00";
+            read_cnt_4x_l  <= delay_cnt_4x;
             capture_rdy_o  <= '1';
             is_arm : IF arm_cmd = '1' THEN
               state   <= WAIT_FOR_TRIGGER;
@@ -192,7 +199,12 @@ BEGIN  -- ARCHITECTURE behavioral
             is_ID_requested: if id_cmd='1' then
               fifo_tdata_o <= DEVICE_ID;
               fifo_tvalid_o <='1';
+              
             end if is_ID_requested;
+            is_debug_requested: if debug_cmd='1' then
+             fifo_tdata_o <= par_trig_msk_l & par_trig_val_l & din_masked & par_val_masked; 
+             fifo_tvalid_o <='1';
+            end if is_debug_requested;
           -------------------------------------------------------------------
           WHEN WAIT_FOR_TRIGGER =>
 
@@ -206,11 +218,11 @@ BEGIN  -- ARCHITECTURE behavioral
                 state <= DELAY_HOLD;
               END IF should_delay;
               triggered_o <= '1';
-              --capture_cnt<=capture_cnt_plus;
+              capture_cnt<=capture_cnt_plus;
             END IF is_trigged;
           -------------------------------------------------------------------
           WHEN DELAY_HOLD =>
-            is_dly_done : IF (delay_cnt = to_integer(UNSIGNED(delay_cnt_4x_l))*4) THEN
+            is_dly_done : IF (delay_cnt = to_integer(UNSIGNED(delay_cnt_4x_l))*4+4) THEN
               delay_cnt <= 0;
               state     <= CAPTURE_DATA;
             ELSIF sample_enable = '1' THEN
@@ -223,17 +235,17 @@ BEGIN  -- ARCHITECTURE behavioral
             triggered_o      <= '1';
 
             --will the next sample be the last one, the go ahead an assert tlast.
-            is_ready_for_tlast : IF (capture_cnt+1 = to_integer(UNSIGNED(read_cnt_4x_l))*4) THEN
+            is_ready_for_tlast : IF (capture_cnt+1 = to_integer(UNSIGNED(read_cnt_4x_l))*4+4) THEN
               fifo_tlast_o <= '1';
             END IF is_ready_for_tlast;
 
-            is_done : IF (capture_cnt = to_integer(UNSIGNED(read_cnt_4x_l))*4) THEN
+            is_done : IF (capture_cnt = to_integer(UNSIGNED(read_cnt_4x_l))*4+4) THEN
               state     <= INIT;
               delay_cnt <= 0;
             --else more samples to collect
-            ELSIF delay_cnt_4x_l = X"00_00" THEN
-            capture_cnt<=capture_cnt_plus;
-              fifo_tvalid_o <= '1';
+--            ELSIF delay_cnt_4x_l = X"00_00" THEN
+--            capture_cnt<=capture_cnt_plus;
+--              fifo_tvalid_o <= '1';
             ELSIF sample_enable = '1' THEN
             capture_cnt<=capture_cnt_plus;
               fifo_tvalid_o <= '1';

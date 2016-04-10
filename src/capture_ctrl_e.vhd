@@ -89,6 +89,8 @@ ENTITY capture_ctrl IS
     arm_cmd        : IN  STD_LOGIC;
     --command to send out a predeterminged ID word
     id_cmd         : in  STD_LOGIC;
+    --debug command
+    debug_cmd      : in STD_LOGIC;
     --sample enable trigger. for subsampling data. 
     sample_enable  : IN  STD_LOGIC                       := '1';
     --send a reset pulse to the sample rate clock

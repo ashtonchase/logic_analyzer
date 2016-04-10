@@ -50,7 +50,7 @@ architecture behav of tb_top is
     
     signal uart_rx : std_logic := '1';
     signal uart_tx : std_logic := '1';
-
+    
 
     constant BAUD_DIVIDER : integer := 100;
     
@@ -65,11 +65,7 @@ begin
 
   -- LA Top instance
   la_top_inst : entity work.la_top
-    generic map (
-      BAUD_RATE => 1_000_000,
-      INPUT_CLK_RATE_HZ => 100_000_000,
-      DATA_WIDTH  => 8,
-      SAMPLE_DEPTH  => 2**8)
+
     port map (
       clk => clk,
       rst => rst,
@@ -82,6 +78,7 @@ begin
       uart_tx => uart_tx); -- UART Transmit Data
       
    clk_proc : process
+   variable counter: natural range 0 to 256;
    begin
         clk <= '0';
         wait for 5ns;
@@ -90,6 +87,8 @@ begin
             clk <= '1';
             wait for 5ns;
             clk <= '0';
+            counter:=(counter+1) mod 256;
+            logic_in<=std_logic_vector(to_unsigned(counter,32));
         end loop;
     end process clk_proc;
     
@@ -103,8 +102,8 @@ begin
         constant c_reset : cmd_record := ((x"00", others => x"00"), 1);
         constant c_run : cmd_record := ((x"01", others => x"00"), 1);
         constant c_test_byte : cmd_record := ((x"A5", others => x"00"), 1);
-        constant c_trig_mask : cmd_record := ((x"C0", x"11", x"BA", x"5E", x"BA", others => x"00"), 5);
-        constant c_trig_val : cmd_record := ((x"C1", x"EF", x"BE", x"AD", x"DE", others => x"00"), 5);
+        constant c_trig_mask : cmd_record := ((x"C0", x"0C", x"00", x"00", x"00", others => x"00"), 5);
+        constant c_trig_val : cmd_record := ((x"C1", x"07", x"00", x"00", x"00", others => x"00"), 5);
         constant c_read_cnt : cmd_record := ((x"81", x"04", x"00", x"04", x"00", others => x"00"), 5);
         constant c_set_divide : cmd_record := ((x"80", x"08", x"00", x"00", x"00", others => x"00"), 5);
         signal resp_to_send : cmd_record;
