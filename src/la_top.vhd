@@ -90,6 +90,7 @@ architecture structural of la_top is
   
   signal rst_cmd        : std_logic                       := '0';
   signal arm_cmd        : std_logic;
+  signal id_cmd         : std_logic;
   signal sample_enable  : std_logic                       := '1';
   signal sample_cnt_rst : std_logic;
   signal delay_cnt_4x   : std_logic_vector(16-1 downto 0) := (others => '0');
@@ -135,6 +136,7 @@ begin  -- ARCHITECTURE structural
       din            => din(7 downto 0),
       armed          => armed_int,
       triggered      => triggered,
+	  id_cmd         => id_cmd,
       rst_cmd        => rst_cmd,
       arm_cmd        => arm_cmd,
       sample_enable  => '1',
@@ -199,6 +201,7 @@ begin  -- ARCHITECTURE structural
       --outputs
       reset     => rst_cmd,
       armed     => arm_cmd,
+	  send_ID   => id_cmd,
       read_cnt  => read_cnt_4x,
       delay_cnt => delay_cnt_4x,
       trig_msk  => par_trig_msk,

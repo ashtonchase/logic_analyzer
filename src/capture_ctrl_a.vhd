@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : la_ctrl_ea.vhd
 -- Created    : 2016-02-27
--- Last update: 2016-03-16
+-- Last update: 2016-04-10
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: This entity module is the primary capture controller of the
@@ -91,7 +91,8 @@ USE ieee.numeric_std.ALL;
 
 ARCHITECTURE behavioral OF capture_ctrl IS
 
-
+  constant DEVICE_ID : std_logic_vector(31 downto 0) := X"53_4c_41_31";  --
+                                                                         --ASCII SLA1
   --entity related signals
   SIGNAL din_ff           : STD_LOGIC_VECTOR(DATA_WIDTH-1 DOWNTO 0) := (OTHERS => '1');
   SIGNAL armed_o          : STD_LOGIC                               := '0';
@@ -109,7 +110,7 @@ ARCHITECTURE behavioral OF capture_ctrl IS
   SIGNAL trig : STD_LOGIC :='0';
 
   --state machine signals
-  TYPE state_t IS (INIT, WAIT_FOR_ARM_CMD, WAIT_FOR_TRIGGER, DELAY_HOLD, CAPTURE_DATA);
+  TYPE state_t IS (INIT, WAIT_FOR_ARM_OR_ID_CMD, WAIT_FOR_TRIGGER, DELAY_HOLD, CAPTURE_DATA);
   SIGNAL state : state_t := INIT;
 
   --capture count
@@ -178,16 +179,20 @@ BEGIN  -- ARCHITECTURE behavioral
               triggered_o <= '0';
             END IF is_fifo_ready;
           -------------------------------------------------------------------
-          WHEN WAIT_FOR_ARM_CMD =>
+          WHEN WAIT_FOR_ARM_OR_ID_CMD =>
             par_trig_msk_l <= par_trig_msk(DATA_WIDTH-1 DOWNTO 0);
             par_trig_val_l <= par_trig_val(DATA_WIDTH-1 DOWNTO 0);
             delay_cnt_4x_l <= delay_cnt_4x;
-            read_cnt_4x_l  <= delay_cnt_4x;
+            read_cnt_4x_l  <= read_cnt_4x;
             capture_rdy_o  <= '1';
             is_arm : IF arm_cmd = '1' THEN
               state   <= WAIT_FOR_TRIGGER;
               armed_o <= '1';
             END IF is_arm;
+            is_ID_requested: if id_cmd='1' then
+              fifo_tdata_o <= DEVICE_ID;
+              fifo_tvalid_o <='1';
+            end if is_ID_requested;
           -------------------------------------------------------------------
           WHEN WAIT_FOR_TRIGGER =>
 

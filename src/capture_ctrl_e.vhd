@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : la_ctrl_e.vhd
 -- Created    : 2016-02-22
--- Last update: 2016-03-16
+-- Last update: 2016-04-10
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- SUMMARY: This entity module is the primary capture controller of the
@@ -87,6 +87,8 @@ ENTITY capture_ctrl IS
     rst_cmd        : IN  STD_LOGIC                       := '0';
     --serially received arm command. one clock cycle required.
     arm_cmd        : IN  STD_LOGIC;
+    --command to send out a predeterminged ID word
+    id_cmd         : in  STD_LOGIC;
     --sample enable trigger. for subsampling data. 
     sample_enable  : IN  STD_LOGIC                       := '1';
     --send a reset pulse to the sample rate clock
