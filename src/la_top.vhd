@@ -69,7 +69,7 @@ entity la_top is
     armed         : out std_logic;
     triggered     : out std_logic;
     capture_rdy   : out std_logic;
-    data_sent     : out std_logic;
+    --data_sent     : out std_logic;
     command_ready : out std_logic;
     debug         : out std_logic_vector(7 downto 0));          
 
@@ -116,6 +116,7 @@ architecture structural of la_top is
   -- Sump Comms Signals
   signal sump_byte         : std_logic_vector(7 downto 0);
   signal command_ready_int : std_logic;
+  signal data_sent : std_logic;
 
   -- Message Processing Signals
   signal sample_f  : std_logic_vector(23 downto 0);
@@ -173,7 +174,7 @@ begin  -- ARCHITECTURE structural
       out_fifo_tdata  => out_fifo_tdata,
       out_fifo_tvalid => out_fifo_tvalid,
       out_fifo_tlast  => out_fifo_tlast,
-      out_fifo_tready => '1');
+      out_fifo_tready => data_sent);  -- data_sent is named poorly, using it for ready signal
 
 
   SUMP_UART_block : entity work.SUMPComms

@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- File       : SUMPComms.vhd
 -- Created    : 2016-02-22
--- Last update: 2016-04-07
+-- Last update: 2016-04-10
 -- Standard   : VHDL'08
 -------------------------------------------------------------------------------
 -- Description: This is the top module for comms between the SUMP module and
@@ -140,19 +140,23 @@ begin
       state_selector : case tx_curr_state is
         when Init =>
           tx_next_state <= Wait_State;
+          -- data_sent     <= '1';
 
         when Wait_State =>
           tx_next_state <= Wait_State;
+          data_sent     <= '1';
 
           if data_ready = '1' then
+            data_sent     <= '0';
             tx_data_ready <= '1';
-            tx_data_in <= tx_command;
+            tx_data_in    <= tx_command;
             tx_next_state <= Send_Data;
           end if;
 
         when Send_Data =>
+          tx_data_ready <= '1';
           tx_next_state <= Send_Data;
-          
+
           if tx_data_sent = '1' then
             tx_next_state <= Drop_Wait;
           end if;
@@ -166,7 +170,7 @@ begin
 
         when Send_Complete =>
           tx_next_state <= Wait_State;
-          data_sent     <= '1';
+          --data_sent     <= '1';
 
         when others =>
           tx_next_state <= Init;
@@ -175,68 +179,6 @@ begin
     end if clock_entry;
     tx_curr_state <= tx_next_state;
   end process command_sender;
-
-
-  --command_sender : process (clk)
-  --begin
-  --  clock_entry : if rst = '1' then
-  --    tx_next_state <= Init;
-
-  --  elsif (clk = '1' and clk'event) then
-  --    data_sent <= '0';
-  --    tx_data_ready <= '0';
-  --    state_selector : case tx_curr_state is
-  --      when Init =>
-  --        tx_next_state <= Wait_State;
-  --        tx_send_counter <= 0;
-
-  --      when Wait_State =>
-  --        tx_next_state <= Wait_State;
-
-  --        if data_ready = '1' then
-  --          tx_next_state <= Shift_Data;
-  --          tx_send_counter <= 0;
-  --          tx_data_buffer <= tx_command;
-
-  --        end if;
-
-  --      when Shift_Data =>
-  --        if tx_send_counter = 4 then
-  --          tx_next_state <= Send_Complete;
-  --        else
-  --        tx_data_in <= tx_data_buffer(31 downto 24);
-  --        tx_data_buffer <= tx_data_buffer(23 downto 0) & "00000000";
-  --        tx_data_ready <= '1';
-  --        tx_next_state <= Send_Data;
-  --        end if;
-
-  --     when Send_Data =>
-  --        tx_next_state <= Send_Data;
-
-  --        if tx_data_sent = '1' then
-  --          tx_send_counter <= tx_send_counter + 1;
-  --          tx_next_state <= Drop_Wait;
-  --        end if;
-
-  --     when Drop_Wait =>
-  --        tx_next_state <= Drop_Wait;
-
-  --        if tx_data_sent = '0' then
-  --          tx_next_state <= Shift_Data;
-  --        end if;
-
-  --     when Send_Complete =>
-  --        tx_next_state <= Wait_State;
-  --        data_sent <= '1';
-
-  --      when others =>
-  --        tx_next_state <= Init;
-
-  --    end case state_selector;
-  --  end if clock_entry;
-  --end process command_sender;
-
-
 
 end architecture comms;
 

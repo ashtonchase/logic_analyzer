@@ -165,10 +165,10 @@ BEGIN  -- ARCHITECTURE top
       armed => LD1, 
       triggered => LD2,
       capture_rdy=>LD0,
-      data_sent=> LD5,
+      --data_sent=> LD5,
       command_ready=> LD4,
       debug=> debug);
       
-  
+    LD5 <= '1';
 
 END ARCHITECTURE top;

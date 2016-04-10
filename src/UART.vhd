@@ -184,6 +184,7 @@ begin
     elsif baud_clock = '1' and baud_clock'event then
       tx <= '1';
 
+      tx_data_sent  <= '0';
       case tx_current_state is
         when Init =>
           tx_next_state <= Wait_State;
@@ -194,7 +195,6 @@ begin
         when Wait_State =>
           tx_next_state <= Wait_State;
           if tx_data_ready = '1' then
-            tx_data_sent  <= '0';
             tx_next_state <= Send_Data;
             trans_data    <= data_in;
             tx_counter    <= 0;
@@ -204,10 +204,11 @@ begin
         when Send_Data =>
           tx_next_state <= Send_Data;
           if tx_counter < 8 then        -- transmit 8 bits
-            tx         <= trans_data(7 - tx_counter);
+            tx         <= trans_data(tx_counter);
             tx_counter <= tx_counter + 1;
           else                          -- transmit high end bit
             tx <= '1';
+            tx_next_state <= Send_Complete;
           end if;
 
         when Send_Complete =>
