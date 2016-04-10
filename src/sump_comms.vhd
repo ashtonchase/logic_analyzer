@@ -140,18 +140,21 @@ begin
       state_selector : case tx_curr_state is
         when Init =>
           tx_next_state <= Wait_State;
-          data_sent     <= '1';
+          -- data_sent     <= '1';
 
         when Wait_State =>
           tx_next_state <= Wait_State;
+          data_sent     <= '1';
 
           if data_ready = '1' then
+            data_sent     <= '0';
             tx_data_ready <= '1';
             tx_data_in    <= tx_command;
             tx_next_state <= Send_Data;
           end if;
 
         when Send_Data =>
+          tx_data_ready <= '1';
           tx_next_state <= Send_Data;
 
           if tx_data_sent = '1' then
@@ -167,7 +170,7 @@ begin
 
         when Send_Complete =>
           tx_next_state <= Wait_State;
-          data_sent     <= '1';
+          --data_sent     <= '1';
 
         when others =>
           tx_next_state <= Init;
