@@ -65,12 +65,13 @@ begin
   process(clk)
   begin
     if rising_edge(clk) then
+      sample <= '0';
       if rst = '1' then
         div    <= 0;
         count  <= 0;
         sample <= '0';
       else
-                                   -- Only update sample rate if cap control isn't armed
+        -- Only update sample rate if cap control isn't armed
         if armed /= '1' then
           div <= to_integer(unsigned(divider_rate));
         end if;
@@ -82,7 +83,7 @@ begin
           count <= count + 1;
         else
           count  <= 0;
-          sample <= not sample;
+          sample <= '1';
         end if;
       end if;
     end if;
