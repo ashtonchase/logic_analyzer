@@ -58,12 +58,13 @@ entity msg_processor is
     sample_f : out std_logic_vector(23 downto 0);  -- Sampling frequency to Sample Rate Control
 
     -- Capture Control Interface
-    reset     : out std_logic;                     -- Reset capture control
-    armed     : out std_logic;                     -- Arm capture control
+    reset     : out std_logic;                      -- Reset capture control
+    armed     : out std_logic;                      -- Arm capture control
+    send_ID   : out std_logic;                      -- Send device ID
     read_cnt  : out std_logic_vector(15 downto 0);  -- Number of samples (divided by 4) to send to memory
     delay_cnt : out std_logic_vector(15 downto 0);  -- Number of samples (divided by 4) to capture after trigger
     trig_msk  : out std_logic_vector(31 downto 0);  -- Define which trigger values must match
-    trig_vals : out std_logic_vector(31 downto 0)  -- Set the trigger's individual bit values
+    trig_vals : out std_logic_vector(31 downto 0)   -- Set the trigger's individual bit values
     );              -- port
 end entity msg_processor;
 
@@ -78,8 +79,9 @@ begin
   process(clk)
   begin
     if rising_edge(clk) then
-      reset <= '0';
-      armed <= '0';
+      reset   <= '0';
+      armed   <= '0';
+      send_ID <= '0';
       if rst = '1' then
         read_cnt  <= x"0000";
         delay_cnt <= x"0000";
@@ -130,7 +132,8 @@ begin
                 reset <= '1';
               when x"01" =>       -- Run
                 armed <= '1';
-              when x"02"                         =>  -- ID (unimplemented)
+              when x"02"                         =>  -- Send ID
+                send_ID <= '1';
               when x"11"                         =>  -- XON (unimplemented)
               when x"13"                         =>  -- XOFF (unimplemented)
               when x"C0" | x"C4" | x"C8" | x"CC" =>  -- Set Trigger Mask
