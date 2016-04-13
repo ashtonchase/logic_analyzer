@@ -13,3 +13,5 @@ Develop a simple device-under-test model for exercising and demonstrating the sy
 Demonstrate design implementation on FPGA development board, which is to be determined.
 
 Logic diagram: https://goo.gl/L0DCAG
+
+Presentation about project https://goo.gl/2kbviW
