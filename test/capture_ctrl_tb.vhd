@@ -57,7 +57,9 @@ ARCHITECTURE acj_func_test OF capture_ctrl_tb IS
   SIGNAL triggered      : STD_LOGIC;
   SIGNAL rst_cmd        : STD_LOGIC                               := '0';
   SIGNAL arm_cmd        : STD_LOGIC                               := '0';
-  SIGNAL sample_enable  : STD_LOGIC                               := '0';
+  SIGNAL id_cmd        : STD_LOGIC                               := '0';
+  SIGNAL debug_cmd        : STD_LOGIC                               := '0';
+  SIGNAL sample_enable  : STD_LOGIC                               := '1';
   SIGNAL sample_cnt_rst : STD_LOGIC;
   SIGNAL read_cnt_4x    : STD_LOGIC_VECTOR(16-1 DOWNTO 0)         := STD_LOGIC_VECTOR(to_unsigned(1000,16));
   SIGNAL par_trig_msk   : STD_LOGIC_VECTOR(32-1 DOWNTO 0)         := X"FE_6B_28_40";
@@ -87,7 +89,9 @@ BEGIN  -- ARCHITECTURE acj_func_test
       triggered      => triggered,
       rst_cmd        => rst_cmd,
       arm_cmd        => arm_cmd,
-      --sample_enable  => sample_enable,
+      id_cmd         => id_cmd,
+      debug_cmd         => debug_cmd,
+      sample_enable  => sample_enable,
       sample_cnt_rst => sample_cnt_rst,
       delay_cnt_4x   => read_cnt_4x,
       read_cnt_4x    => read_cnt_4x,
@@ -105,6 +109,23 @@ BEGIN  -- ARCHITECTURE acj_func_test
   -- clock generation
   Clk <= NOT Clk AFTER 2 NS;
 
+   sample_rate_sim : process
+   
+   begin
+   
+    wait UNTIL falling_edge(sample_cnt_rst);
+    loop
+   sample_enable<='0';
+   wait for 30ns;
+   WAIT UNTIL rising_edge(clk);
+   sample_enable<='1';
+   WAIT UNTIL rising_edge(clk);
+   end loop;
+   
+   end process;
+
+
+
   -- waveform generation
   WaveGen_Proc : PROCESS
   BEGIN
@@ -113,14 +134,38 @@ BEGIN  -- ARCHITECTURE acj_func_test
 
     WAIT UNTIL rst = '0';
     FOR cycle IN 0 TO 20 LOOP
-      WAIT UNTIL rising_edge(clk);
+    WAIT UNTIL rising_edge(clk);
     END LOOP;  -- cycle
     WAIT UNTIL rising_edge(capture_rdy);
     WAIT UNTIL rising_edge(clk);
     arm_cmd <= '1';
     WAIT UNTIL rising_edge(clk);
     arm_cmd <= '0';
+    rst_cmd<='1';
+    WAIT UNTIL rising_edge(clk);
+    rst_cmd<='0';
+    wait for 10 us; 
+    WAIT UNTIL rising_edge(clk);
+    id_cmd<='1';
+    WAIT UNTIL rising_edge(clk);
+    id_cmd<='0';
+    wait for 10 us; 
+    
+    WAIT UNTIL rising_edge(clk);
+    debug_cmd<='1';
+    WAIT UNTIL rising_edge(clk);
+    debug_cmd<='0';
+    wait for 10 us;
+    
+    FOR cycle IN 0 TO 20 LOOP
+    WAIT UNTIL rising_edge(clk);
+    END LOOP;  -- cycle
+    WAIT UNTIL rising_edge(clk);
+    arm_cmd <= '1';
+    WAIT UNTIL rising_edge(clk);
+    arm_cmd <= '0';
     WAIT;
+
 
 
   END PROCESS WaveGen_Proc;
